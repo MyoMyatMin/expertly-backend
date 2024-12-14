@@ -9,6 +9,7 @@ import (
 
 	"github.com/MyoMyatMin/expertly-backend/routes"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func main() {
