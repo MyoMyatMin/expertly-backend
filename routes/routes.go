@@ -27,6 +27,7 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Get("/", handlers.HelloHandler)
 	r.Post("/signup", handlers.SignUpHandler(quaries).ServeHTTP)
 	r.Post("/login", handlers.LoginHandler(quaries).ServeHTTP)
+	r.Post("/refresh_token", handlers.RefreshTokenHandler(quaries).ServeHTTP)
 
 	return r
 }

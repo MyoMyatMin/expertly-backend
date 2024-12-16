@@ -10,10 +10,9 @@ import (
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var jwtSecretKey = os.Getenv("SECRET_KEY")
 
 type JWTClaims struct {
 	UserID uuid.UUID `json:"user_id"`
@@ -22,30 +21,31 @@ type JWTClaims struct {
 }
 
 func generateAccessToken(userID uuid.UUID, role string) (string, error) {
-	expirationTime := time.Now().Add(1 * time.Hour)
-	claims := JWTClaims{
-		UserID: userID,
-		Role:   role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-		},
+	godotenv.Load(".env")
+	var jwtSecretKey = os.Getenv("SECRET_KEY")
+	expirationTime := time.Now().Add(1 * time.Hour).Unix()
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"role":    role,
+		"exp":     expirationTime,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecretKey)
+	return token.SignedString([]byte(jwtSecretKey))
 }
 
 func generateRefreshToken(userID uuid.UUID) (string, error) {
-	expirationTime := time.Now().Add(24 * time.Hour)
-	claims := JWTClaims{
-		UserID: userID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-		},
+	godotenv.Load(".env")
+	var jwtSecretKey = os.Getenv("SECRET_KEY")
+	expirationTime := time.Now().Add(24 * time.Hour).Unix()
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"exp":     expirationTime,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecretKey)
+	return token.SignedString([]byte(jwtSecretKey))
+
 }
 
 func SignUpHandler(db *database.Queries) http.Handler {

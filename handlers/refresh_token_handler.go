@@ -3,14 +3,20 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 )
 
 func RefreshTokenHandler(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		godotenv.Load(".env")
+		var jwtSecretKey = []byte(os.Getenv("SECRET_KEY"))
+
 		refreshCookie, err := r.Cookie("refresh_token")
 		if err != nil {
 			http.Error(w, "Missing refresh token", http.StatusUnauthorized)
