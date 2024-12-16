@@ -204,3 +204,36 @@ func LoginHandler(db *database.Queries) http.Handler {
 		json.NewEncoder(w).Encode(response)
 	})
 }
+
+func CheckAuthStatsHander(db *database.Queries) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accessToken, err := r.Cookie("access_token")
+		if err != nil {
+			http.Error(w, "No access token", http.StatusUnauthorized)
+			return
+		}
+
+		claims := &JWTClaims{}
+		_, err = jwt.ParseWithClaims(accessToken.Value, claims, func(token *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("SECRET_KEY")), nil
+		})
+
+		if err != nil {
+			http.Error(w, "Invalid access token", http.StatusUnauthorized)
+			return
+		}
+
+		user, err := db.GetUserById(r.Context(), claims.UserID)
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
+		response := map[string]interface{}{
+			"user": user,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	})
+}

@@ -24,3 +24,13 @@ SELECT id,
     suspended_until, 
     created_at, 
     updated_at FROM users WHERE email = $1;
+
+-- name: GetUserById :one
+SELECT id, 
+    name, 
+    email, 
+    password, 
+    role, 
+    suspended_until, 
+    created_at, 
+    updated_at FROM users WHERE id = $1;
