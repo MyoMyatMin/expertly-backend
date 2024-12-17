@@ -13,16 +13,17 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type authedHandler func(http.ResponseWriter, *http.Request, database.User)
-
-func MiddlewareAuth(handler authedHandler, db *database.Queries) http.HandlerFunc {
+// MiddlewareAuth authenticates the user using JWT and passes control to the next handler.
+func MiddlewareAuth(db *database.Queries, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		tokenString, err := extractTokenCookie(r)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
+		// Parse the JWT token
 		claims, err := parseJWTToken(tokenString)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
@@ -34,25 +35,25 @@ func MiddlewareAuth(handler authedHandler, db *database.Queries) http.HandlerFun
 			respondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		user, err := db.GetUserById(r.Context(), userID)
+
+		_, err = db.GetUserById(r.Context(), userID)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "User not found")
 			return
 		}
 
-		handler(w, r, user)
+		next(w, r)
 	}
 }
 
 func respondWithError(w http.ResponseWriter, statusCode int, message string) {
-	w.WriteHeader(statusCode)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 	response := map[string]string{"error": message}
 	_ = json.NewEncoder(w).Encode(response)
 }
 
 func extractTokenCookie(r *http.Request) (string, error) {
-
 	cookie, err := r.Cookie("access_token")
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
@@ -60,11 +61,9 @@ func extractTokenCookie(r *http.Request) (string, error) {
 		}
 		return "", fmt.Errorf("could not retrieve access token cookie: %v", err)
 	}
-
 	if cookie.Value == "" {
 		return "", errors.New("empty access token cookie")
 	}
-
 	return cookie.Value, nil
 }
 
@@ -73,9 +72,7 @@ func parseJWTToken(tokenString string) (jwt.MapClaims, error) {
 	if err != nil {
 		return nil, errors.New("failed to load .env file")
 	}
-
 	jwtSecret := os.Getenv("SECRET_KEY")
-
 	if jwtSecret == "" {
 		return nil, errors.New("missing JWT secret key")
 	}
@@ -88,7 +85,6 @@ func parseJWTToken(tokenString string) (jwt.MapClaims, error) {
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
-
 	return claims, nil
 }
 
@@ -102,6 +98,5 @@ func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.Nil, errors.New("invalid user ID format in token")
 	}
-
 	return userID, nil
 }

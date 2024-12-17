@@ -2,6 +2,7 @@ package routes
 
 import (
 	"database/sql"
+	"net/http"
 
 	"github.com/MyoMyatMin/expertly-backend/handlers"
 	"github.com/MyoMyatMin/expertly-backend/middlewares"
@@ -31,9 +32,9 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Post("/login", handlers.LoginHandler(quaries).ServeHTTP)
 	r.Post("/logout", handlers.LogoutHandler)
 	r.Post("/refresh_token", handlers.RefreshTokenHandler(quaries).ServeHTTP)
-	r.Get("/auth/me", handlers.CheckAuthStatsHander(quaries).ServeHTTP)
+	r.Get("/auth/me", middlewares.MiddlewareAuth(quaries, http.HandlerFunc(handlers.CheckAuthStatsHander(quaries, database.User{}).ServeHTTP)))
 
-	r.Get("/test_middlewares", middlewares.MiddlewareAuth(handlers.TestMiddlewaresHandler, quaries).ServeHTTP)
+	r.Get("/test_middlewares", middlewares.MiddlewareAuth(quaries, handlers.TestMiddlewaresHandler(quaries, database.User{}).ServeHTTP))
 
 	return r
 }

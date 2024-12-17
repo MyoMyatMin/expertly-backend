@@ -205,7 +205,7 @@ func LoginHandler(db *database.Queries) http.Handler {
 	})
 }
 
-func CheckAuthStatsHander(db *database.Queries) http.Handler {
+func CheckAuthStatsHander(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accessToken, err := r.Cookie("access_token")
 		if err != nil {
@@ -263,11 +263,13 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func TestMiddlewaresHandler(w http.ResponseWriter, r *http.Request, user database.User) {
-	response := map[string]interface{}{
-		"user": user,
-	}
+func TestMiddlewaresHandler(db *database.Queries, user database.User) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := map[string]interface{}{
+			"user": user,
+		}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	})
 }
