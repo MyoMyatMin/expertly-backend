@@ -4,10 +4,12 @@ import (
 	"database/sql"
 
 	"github.com/MyoMyatMin/expertly-backend/handlers"
+	"github.com/MyoMyatMin/expertly-backend/middlewares"
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+	// Fetch user from the database
 )
 
 func SetUpRoutes(db *sql.DB) *chi.Mux {
@@ -27,8 +29,11 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Get("/", handlers.HelloHandler)
 	r.Post("/signup", handlers.SignUpHandler(quaries).ServeHTTP)
 	r.Post("/login", handlers.LoginHandler(quaries).ServeHTTP)
+	r.Post("/logout", handlers.LogoutHandler)
 	r.Post("/refresh_token", handlers.RefreshTokenHandler(quaries).ServeHTTP)
 	r.Get("/auth/me", handlers.CheckAuthStatsHander(quaries).ServeHTTP)
+
+	r.Get("/test_middlewares", middlewares.MiddlewareAuth(handlers.TestMiddlewaresHandler, quaries).ServeHTTP)
 
 	return r
 }

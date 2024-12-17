@@ -237,3 +237,37 @@ func CheckAuthStatsHander(db *database.Queries) http.Handler {
 		json.NewEncoder(w).Encode(response)
 	})
 }
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Expires:  time.Now().Add(-1 * time.Hour),
+		HttpOnly: true,
+		Secure:   true,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Expires:  time.Now().Add(-1 * time.Hour),
+		HttpOnly: true,
+		Secure:   true,
+	})
+
+	response := map[string]interface{}{
+		"message": "Logged out",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+}
+
+func TestMiddlewaresHandler(w http.ResponseWriter, r *http.Request, user database.User) {
+	response := map[string]interface{}{
+		"user": user,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
