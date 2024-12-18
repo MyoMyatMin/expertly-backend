@@ -34,12 +34,13 @@ func generateAccessToken(userID uuid.UUID, role string) (string, error) {
 	return token.SignedString([]byte(jwtSecretKey))
 }
 
-func generateRefreshToken(userID uuid.UUID) (string, error) {
+func generateRefreshToken(userID uuid.UUID, role string) (string, error) {
 	godotenv.Load(".env")
 	var jwtSecretKey = os.Getenv("SECRET_KEY")
 	expirationTime := time.Now().Add(24 * time.Hour).Unix()
 	claims := jwt.MapClaims{
 		"user_id": userID,
+		"role":    role,
 		"exp":     expirationTime,
 	}
 
@@ -103,7 +104,7 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(user.ID)
+		refreshToken, err := generateRefreshToken(user.ID, role)
 		if err != nil {
 			http.Error(w, "Couldn't generate refresh token", http.StatusInternalServerError)
 			return
@@ -170,7 +171,7 @@ func LoginHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(user.ID)
+		refreshToken, err := generateRefreshToken(user.ID, user.Role.String)
 		if err != nil {
 			http.Error(w, "Couldn't generate refresh token", http.StatusInternalServerError)
 			return
@@ -179,7 +180,7 @@ func LoginHandler(db *database.Queries) http.Handler {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "access_token",
 			Value:    accessToken,
-			Expires:  time.Now().Add(1 * time.Hour),
+			Expires:  time.Now().Add(2 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
 			Path:     "/",

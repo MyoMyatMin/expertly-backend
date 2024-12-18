@@ -13,7 +13,6 @@ import (
 
 func RefreshTokenHandler(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		godotenv.Load(".env")
 		var jwtSecretKey = []byte(os.Getenv("SECRET_KEY"))
 
@@ -49,7 +48,7 @@ func RefreshTokenHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(claims.UserID)
+		refreshToken, err := generateRefreshToken(claims.UserID, claims.Role)
 		if err != nil {
 			http.Error(w, "Couldn't generate new refresh token", http.StatusInternalServerError)
 			return
@@ -58,7 +57,7 @@ func RefreshTokenHandler(db *database.Queries) http.Handler {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "access_token",
 			Value:    accessToken,
-			Expires:  time.Now().Add(1 * time.Hour),
+			Expires:  time.Now().Add(2 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
 			Path:     "/",

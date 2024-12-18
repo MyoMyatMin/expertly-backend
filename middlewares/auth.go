@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,17 +16,14 @@ import (
 
 type HandlerWithUser func(http.ResponseWriter, *http.Request, database.User)
 
-// MiddlewareAuth authenticates the user using JWT and passes control to the next handler.
 func MiddlewareAuth(db *database.Queries, handler HandlerWithUser) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		tokenString, err := extractTokenCookie(r)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		// Parse the JWT token
 		claims, err := parseJWTToken(tokenString)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
@@ -43,7 +41,7 @@ func MiddlewareAuth(db *database.Queries, handler HandlerWithUser) http.HandlerF
 			respondWithError(w, http.StatusUnauthorized, "User not found")
 			return
 		}
-		fmt.Println(user)
+
 		handler(w, r, user)
 	}
 }
@@ -84,9 +82,14 @@ func parseJWTToken(tokenString string) (jwt.MapClaims, error) {
 		return []byte(jwtSecret), nil
 	})
 
+	if isTokenExpired(claims) {
+		return nil, errors.New("token is expired")
+	}
+
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
+
 	return claims, nil
 }
 
@@ -101,4 +104,19 @@ func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 		return uuid.Nil, errors.New("invalid user ID format in token")
 	}
 	return userID, nil
+}
+
+// isTokenExpired checks if the JWT token has expired.
+func isTokenExpired(claims jwt.MapClaims) bool {
+	// Retrieve expiration time from claims
+	expTime, ok := claims["exp"].(float64)
+	if !ok {
+		return true // If there's no "exp" claim, consider it invalid
+	}
+
+	// Compare expiration time with current time
+	expTimeUnix := int64(expTime)
+	currentTime := time.Now().Unix()
+
+	return currentTime > expTimeUnix
 }
