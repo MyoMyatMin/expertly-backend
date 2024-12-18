@@ -205,38 +205,38 @@ func LoginHandler(db *database.Queries) http.Handler {
 	})
 }
 
-func CheckAuthStatsHander(db *database.Queries, user database.User) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accessToken, err := r.Cookie("access_token")
-		if err != nil {
-			http.Error(w, "No access token", http.StatusUnauthorized)
-			return
-		}
+// func CheckAuthStatsHander(db *database.Queries, user database.User) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		accessToken, err := r.Cookie("access_token")
+// 		if err != nil {
+// 			http.Error(w, "No access token", http.StatusUnauthorized)
+// 			return
+// 		}
 
-		claims := &JWTClaims{}
-		_, err = jwt.ParseWithClaims(accessToken.Value, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(os.Getenv("SECRET_KEY")), nil
-		})
+// 		claims := &JWTClaims{}
+// 		_, err = jwt.ParseWithClaims(accessToken.Value, claims, func(token *jwt.Token) (interface{}, error) {
+// 			return []byte(os.Getenv("SECRET_KEY")), nil
+// 		})
 
-		if err != nil {
-			http.Error(w, "Invalid access token", http.StatusUnauthorized)
-			return
-		}
+// 		if err != nil {
+// 			http.Error(w, "Invalid access token", http.StatusUnauthorized)
+// 			return
+// 		}
 
-		user, err := db.GetUserById(r.Context(), claims.UserID)
-		if err != nil {
-			http.Error(w, "User not found", http.StatusNotFound)
-			return
-		}
+// 		user, err := db.GetUserById(r.Context(), claims.UserID)
+// 		if err != nil {
+// 			http.Error(w, "User not found", http.StatusNotFound)
+// 			return
+// 		}
 
-		response := map[string]interface{}{
-			"user": user,
-		}
+// 		response := map[string]interface{}{
+// 			"user": user,
+// 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	})
-}
+// 		w.Header().Set("Content-Type", "application/json")
+// 		json.NewEncoder(w).Encode(response)
+// 	})
+// }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
@@ -262,14 +262,25 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 
 }
-
-func TestMiddlewaresHandler(db *database.Queries, user database.User) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func CheckAuthStatsHandler(db *database.Queries, user database.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		response := map[string]interface{}{
 			"user": user,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
-	})
+	}
+}
+
+// Modify TestMiddlewaresHandler to accept a user parameter
+func TestMiddlewaresHandler(db *database.Queries, user database.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		response := map[string]interface{}{
+			"user": user,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
 }

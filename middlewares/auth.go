@@ -13,8 +13,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type HandlerWithUser func(http.ResponseWriter, *http.Request, database.User)
+
 // MiddlewareAuth authenticates the user using JWT and passes control to the next handler.
-func MiddlewareAuth(db *database.Queries, next http.HandlerFunc) http.HandlerFunc {
+func MiddlewareAuth(db *database.Queries, handler HandlerWithUser) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		tokenString, err := extractTokenCookie(r)
@@ -36,13 +38,13 @@ func MiddlewareAuth(db *database.Queries, next http.HandlerFunc) http.HandlerFun
 			return
 		}
 
-		_, err = db.GetUserById(r.Context(), userID)
+		user, err := db.GetUserById(r.Context(), userID)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "User not found")
 			return
 		}
-
-		next(w, r)
+		fmt.Println(user)
+		handler(w, r, user)
 	}
 }
 

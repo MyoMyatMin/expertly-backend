@@ -32,9 +32,13 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Post("/login", handlers.LoginHandler(quaries).ServeHTTP)
 	r.Post("/logout", handlers.LogoutHandler)
 	r.Post("/refresh_token", handlers.RefreshTokenHandler(quaries).ServeHTTP)
-	r.Get("/auth/me", middlewares.MiddlewareAuth(quaries, http.HandlerFunc(handlers.CheckAuthStatsHander(quaries, database.User{}).ServeHTTP)))
-
-	r.Get("/test_middlewares", middlewares.MiddlewareAuth(quaries, handlers.TestMiddlewaresHandler(quaries, database.User{}).ServeHTTP))
+	r.Get("/auth/me", middlewares.MiddlewareAuth(quaries,
+		func(w http.ResponseWriter, r *http.Request, user database.User) {
+			handlers.CheckAuthStatsHandler(quaries, user).ServeHTTP(w, r)
+		}))
+	r.Get("/test_middlewares", middlewares.MiddlewareAuth(quaries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.TestMiddlewaresHandler(quaries, user).ServeHTTP(w, r)
+	}))
 
 	return r
 }
