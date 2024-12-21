@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -280,7 +281,7 @@ func TestMiddlewaresHandler(db *database.Queries, user database.User) http.Handl
 		response := map[string]interface{}{
 			"user": user,
 		}
-
+		fmt.Println("User: ", user)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}
