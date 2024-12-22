@@ -20,7 +20,7 @@ RETURNING id, user_id, title, content, created_at, updated_at, status
 
 type CreatePostParams struct {
 	ID      uuid.UUID
-	UserID  uuid.NullUUID
+	UserID  uuid.UUID
 	Title   string
 	Content string
 	Status  sql.NullString

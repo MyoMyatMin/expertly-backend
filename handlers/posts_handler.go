@@ -52,17 +52,12 @@ func CreatePostHandler(db *database.Queries, user database.User) http.Handler {
 			Valid:  true,
 		}
 
-		userIDNull := uuid.NullUUID{
-			UUID:  user.ID,
-			Valid: true,
-		}
-
 		post, err := db.CreatePost(r.Context(), database.CreatePostParams{
 			ID:      uuid.New(),
 			Title:   params.Title,
 			Content: params.Content,
 			Status:  statusNull,
-			UserID:  userIDNull,
+			UserID:  user.ID,
 		})
 		if err != nil {
 			http.Error(w, "Couldn't create post", http.StatusInternalServerError)
