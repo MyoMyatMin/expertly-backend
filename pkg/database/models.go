@@ -20,6 +20,12 @@ type Post struct {
 	Status    sql.NullString
 }
 
+type Upvote struct {
+	UserID    uuid.UUID
+	PostID    uuid.UUID
+	CreatedAt sql.NullTime
+}
+
 type User struct {
 	ID             uuid.UUID
 	Name           string

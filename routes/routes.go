@@ -56,5 +56,13 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.GetPostByIDHandler(queries, user).ServeHTTP(w, r)
 	}))
 
+	r.Post("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.InsertUpvoteHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Delete("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.DeleteUpvoteHandler(queries, user).ServeHTTP(w, r)
+	}))
+
 	return r
 }
