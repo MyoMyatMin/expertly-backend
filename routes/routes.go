@@ -64,5 +64,17 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.DeleteUpvoteHandler(queries, user).ServeHTTP(w, r)
 	}))
 
+	r.Post("/posts/{postID}/comments", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.CreateCommentHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Delete("/posts/{postID}/comments/{commentID}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.DeleteCommentHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Patch("/posts/{postID}/comments/{commentID}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.UpdateCommentHandler(queries, user).ServeHTTP(w, r)
+	}))
+
 	return r
 }
