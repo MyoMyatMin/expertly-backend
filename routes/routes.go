@@ -76,5 +76,9 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.UpdateCommentHandler(queries, user).ServeHTTP(w, r)
 	}))
 
+	r.Get("/posts/{postID}/comments", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.GetAllCommentsByPostHandler(queries, user).ServeHTTP(w, r)
+	}))
+
 	return r
 }

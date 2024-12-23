@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
@@ -9,27 +10,31 @@ import (
 	"github.com/google/uuid"
 )
 
+type Comment struct {
+	ID              uuid.UUID     `json:"id"`
+	Content         string        `json:"content"`
+	ParentCommentID uuid.NullUUID `json:"parent_comment_id"`
+	PostID          uuid.UUID     `json:"post_id"`
+	UserID          uuid.UUID     `json:"user_id"`
+	Replies         []Comment     `json:"replies"`
+}
+
 func CreateCommentHandler(db *database.Queries, user database.User) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// Define the parameters struct to receive JSON body
 		type parameters struct {
 			Content         string        `json:"content"`
 			ParentCommentID uuid.NullUUID `json:"parent_comment_id"`
 		}
+		PostID := chi.URLParam(r, "postID")
 
-		// Get the PostID from the URL path
-		PostID := chi.URLParam(r, "post_id")
-
-		// Parse the PostID to uuid.UUID
 		postID, err := uuid.Parse(PostID)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
-		// Decode the JSON body into the 'parameters' struct
 		var params parameters
 		err = json.NewDecoder(r.Body).Decode(&params)
 		if err != nil {
@@ -37,8 +42,8 @@ func CreateCommentHandler(db *database.Queries, user database.User) http.Handler
 			return
 		}
 
-		// Call CreateComment function from the database
 		comment, err := db.CreateComment(r.Context(), database.CreateCommentParams{
+			ID:              uuid.New(),
 			Content:         params.Content,
 			ParentCommentID: params.ParentCommentID,
 			PostID:          postID,
@@ -64,7 +69,7 @@ func UpdateCommentHandler(db *database.Queries, user database.User) http.Handler
 			Content string `json:"content"`
 		}
 
-		CommentID := chi.URLParam(r, "comment_id")
+		CommentID := chi.URLParam(r, "commentID")
 		commentID, err := uuid.Parse(CommentID)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -97,7 +102,7 @@ func UpdateCommentHandler(db *database.Queries, user database.User) http.Handler
 
 func DeleteCommentHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		CommentID := chi.URLParam(r, "comment_id")
+		CommentID := chi.URLParam(r, "commentID")
 		commentID, err := uuid.Parse(CommentID)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -112,4 +117,73 @@ func DeleteCommentHandler(db *database.Queries, user database.User) http.Handler
 
 		w.WriteHeader(http.StatusOK)
 	})
+}
+
+func GetAllCommentsByPostHandler(db *database.Queries, user database.User) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		PostID := chi.URLParam(r, "postID")
+		postID, err := uuid.Parse(PostID)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		dbcomments, err := db.GetCommentsByPost(r.Context(), postID)
+		if err != nil {
+			http.Error(w, "Failed to get comments: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var comments []Comment
+
+		for _, dbcomment := range dbcomments {
+			comments = append(comments, Comment{
+				ID:              dbcomment.ID,
+				Content:         dbcomment.Content,
+				ParentCommentID: dbcomment.ParentCommentID,
+				PostID:          dbcomment.PostID,
+				UserID:          dbcomment.UserID,
+			})
+
+		}
+
+		nestedComments := BuildNestedComments(comments)
+
+		fmt.Println(nestedComments)
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(nestedComments); err != nil {
+			http.Error(w, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
+		}
+	})
+}
+
+func BuildNestedComments(comments []Comment) []*Comment {
+	commentMap := make(map[uuid.UUID]*Comment)
+
+	for i := range comments {
+		commentMap[comments[i].ID] = &comments[i]
+	}
+
+	var nestedComments []*Comment
+
+	for i := range comments {
+		comment := &comments[i]
+
+		if !comment.ParentCommentID.Valid {
+			nestedComments = append(nestedComments, comment)
+		} else {
+			parentID := comment.ParentCommentID.UUID
+			parentComment, ok := commentMap[parentID]
+
+			if ok {
+				parentComment.Replies = append(parentComment.Replies, *comment)
+
+			} else {
+				fmt.Println("Parent comment not found")
+			}
+		}
+	}
+
+	return nestedComments
 }
