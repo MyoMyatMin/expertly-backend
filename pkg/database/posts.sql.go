@@ -7,15 +7,14 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (id, user_id, title, content, status)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, user_id, title, content, created_at, updated_at, status
+INSERT INTO posts (id, user_id, title, content)
+VALUES ($1, $2, $3, $4)
+RETURNING id, user_id, title, content, created_at, updated_at
 `
 
 type CreatePostParams struct {
@@ -23,7 +22,6 @@ type CreatePostParams struct {
 	UserID  uuid.UUID
 	Title   string
 	Content string
-	Status  sql.NullString
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
@@ -32,7 +30,6 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		arg.UserID,
 		arg.Title,
 		arg.Content,
-		arg.Status,
 	)
 	var i Post
 	err := row.Scan(
@@ -42,7 +39,6 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Status,
 	)
 	return i, err
 }
@@ -58,7 +54,7 @@ func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
 }
 
 const getPost = `-- name: GetPost :one
-SELECT id, user_id, title, content, created_at, updated_at, status
+SELECT id, user_id, title, content, created_at, updated_at
 FROM posts
 WHERE id = $1
 `
@@ -73,13 +69,12 @@ func (q *Queries) GetPost(ctx context.Context, id uuid.UUID) (Post, error) {
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Status,
 	)
 	return i, err
 }
 
 const listPosts = `-- name: ListPosts :many
-SELECT id, user_id, title, content, created_at, updated_at, status
+SELECT id, user_id, title, content, created_at, updated_at
 FROM posts
 ORDER BY created_at DESC
 `
@@ -100,7 +95,6 @@ func (q *Queries) ListPosts(ctx context.Context) ([]Post, error) {
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -119,26 +113,19 @@ const updatePost = `-- name: UpdatePost :one
 UPDATE posts
 SET title = $2,
     content = $3,
-    status = $4,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
-RETURNING id, user_id, title, content, created_at, updated_at, status
+RETURNING id, user_id, title, content, created_at, updated_at
 `
 
 type UpdatePostParams struct {
 	ID      uuid.UUID
 	Title   string
 	Content string
-	Status  sql.NullString
 }
 
 func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error) {
-	row := q.db.QueryRowContext(ctx, updatePost,
-		arg.ID,
-		arg.Title,
-		arg.Content,
-		arg.Status,
-	)
+	row := q.db.QueryRowContext(ctx, updatePost, arg.ID, arg.Title, arg.Content)
 	var i Post
 	err := row.Scan(
 		&i.ID,
@@ -147,7 +134,6 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, e
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Status,
 	)
 	return i, err
 }

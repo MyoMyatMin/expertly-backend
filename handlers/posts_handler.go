@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -27,7 +26,6 @@ func CreatePostHandler(db *database.Queries, user database.User) http.Handler {
 		type parameters struct {
 			Title   string `json:"title"`
 			Content string `json:"content"`
-			Status  string `json:"status"`
 		}
 
 		var params parameters
@@ -37,26 +35,10 @@ func CreatePostHandler(db *database.Queries, user database.User) http.Handler {
 			return
 		}
 
-		validStatuses := map[string]bool{
-			"draft":     true,
-			"published": true,
-		}
-
-		if _, valid := validStatuses[params.Status]; !valid {
-			http.Error(w, "Invalid status", http.StatusBadRequest)
-			return
-		}
-
-		statusNull := sql.NullString{
-			String: params.Status,
-			Valid:  true,
-		}
-
 		post, err := db.CreatePost(r.Context(), database.CreatePostParams{
 			ID:      uuid.New(),
 			Title:   params.Title,
 			Content: params.Content,
-			Status:  statusNull,
 			UserID:  user.ID,
 		})
 		if err != nil {
@@ -66,12 +48,10 @@ func CreatePostHandler(db *database.Queries, user database.User) http.Handler {
 
 		json.NewEncoder(w).Encode(post)
 	})
-
 }
 
 func GetPostByIDHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		postID := chi.URLParam(r, "id")
 
 		postUUID, err := uuid.Parse(postID)
@@ -103,7 +83,6 @@ func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
 		type parameters struct {
 			Title   string `json:"title"`
 			Content string `json:"content"`
-			Status  string `json:"status"`
 		}
 
 		var params parameters
@@ -113,26 +92,10 @@ func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
 			return
 		}
 
-		validStatuses := map[string]bool{
-			"draft":     true,
-			"published": true,
-		}
-
-		if _, valid := validStatuses[params.Status]; !valid {
-			http.Error(w, "Invalid status", http.StatusBadRequest)
-			return
-		}
-
-		statusNull := sql.NullString{
-			String: params.Status,
-			Valid:  true,
-		}
-
 		post, err := db.UpdatePost(r.Context(), database.UpdatePostParams{
 			ID:      postUUID,
 			Title:   params.Title,
 			Content: params.Content,
-			Status:  statusNull,
 		})
 		if err != nil {
 			http.Error(w, "Couldn't update post", http.StatusInternalServerError)

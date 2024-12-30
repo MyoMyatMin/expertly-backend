@@ -28,7 +28,6 @@ type Post struct {
 	Content   string
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
-	Status    sql.NullString
 }
 
 type Upvote struct {
