@@ -36,10 +36,22 @@ func MiddlewareAuth(db *database.Queries, handler HandlerWithUser) http.HandlerF
 			return
 		}
 
-		user, err := db.GetUserById(r.Context(), userID)
+		userRow, err := db.GetUserById(r.Context(), userID)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "User not found")
 			return
+		}
+
+		user := database.User{
+			ID:             userRow.ID,
+			Name:           userRow.Name,
+			Username:       userRow.Username,
+			Email:          userRow.Email,
+			Password:       userRow.Password,
+			Role:           userRow.Role,
+			SuspendedUntil: userRow.SuspendedUntil,
+			CreatedAt:      userRow.CreatedAt,
+			UpdatedAt:      userRow.UpdatedAt,
 		}
 
 		handler(w, r, user)

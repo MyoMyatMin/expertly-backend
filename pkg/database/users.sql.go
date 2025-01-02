@@ -15,6 +15,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users(id, 
     name, 
+    username,
     email, 
     password, 
     role, 
@@ -25,14 +26,16 @@ INSERT INTO users(id,
         $3, 
         $4, 
         $5, 
-        $6
+        $6,
+        $7
     )
-    RETURNING id, name, email, role, suspended_until, created_at, updated_at
+    RETURNING id, name, email, role, suspended_until, created_at, updated_at,username
 `
 
 type CreateUserParams struct {
 	ID             uuid.UUID
 	Name           string
+	Username       string
 	Email          string
 	Password       string
 	Role           sql.NullString
@@ -47,12 +50,14 @@ type CreateUserRow struct {
 	SuspendedUntil sql.NullTime
 	CreatedAt      sql.NullTime
 	UpdatedAt      sql.NullTime
+	Username       string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
 		arg.ID,
 		arg.Name,
+		arg.Username,
 		arg.Email,
 		arg.Password,
 		arg.Role,
@@ -67,6 +72,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.SuspendedUntil,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Username,
 	)
 	return i, err
 }
@@ -74,6 +80,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, 
     name, 
+    username,
     email, 
     password, 
     role, 
@@ -82,12 +89,25 @@ SELECT id,
     updated_at FROM users WHERE email = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID             uuid.UUID
+	Name           string
+	Username       string
+	Email          string
+	Password       string
+	Role           sql.NullString
+	SuspendedUntil sql.NullTime
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Username,
 		&i.Email,
 		&i.Password,
 		&i.Role,
@@ -101,6 +121,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 const getUserById = `-- name: GetUserById :one
 SELECT id, 
     name, 
+    username,
     email, 
     password, 
     role, 
@@ -109,12 +130,66 @@ SELECT id,
     updated_at FROM users WHERE id = $1
 `
 
-func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
+type GetUserByIdRow struct {
+	ID             uuid.UUID
+	Name           string
+	Username       string
+	Email          string
+	Password       string
+	Role           sql.NullString
+	SuspendedUntil sql.NullTime
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (GetUserByIdRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserById, id)
-	var i User
+	var i GetUserByIdRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.Role,
+		&i.SuspendedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT id, 
+    name, 
+    username,
+    email, 
+    password, 
+    role, 
+    suspended_until, 
+    created_at, 
+    updated_at FROM users WHERE username = $1
+`
+
+type GetUserByUsernameRow struct {
+	ID             uuid.UUID
+	Name           string
+	Username       string
+	Email          string
+	Password       string
+	Role           sql.NullString
+	SuspendedUntil sql.NullTime
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByUsername, username)
+	var i GetUserByUsernameRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Username,
 		&i.Email,
 		&i.Password,
 		&i.Role,

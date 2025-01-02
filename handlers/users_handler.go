@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
+	"github.com/MyoMyatMin/expertly-backend/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -78,6 +79,12 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			role = params.Roles
 		}
 
+		username, err := utils.GenerateUniqueUsername(params.Name, db, r)
+		if err != nil {
+			http.Error(w, "Couldn't generate unique username", http.StatusInternalServerError)
+			return
+		}
+
 		passwordHash, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
 		if err != nil {
 			http.Error(w, "Couldn't hash password", http.StatusInternalServerError)
@@ -92,6 +99,7 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			Email:    params.Email,
 			Password: string(passwordHash),
 			Role:     roleNull,
+			Username: username,
 		})
 
 		if err != nil {

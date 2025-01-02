@@ -28,6 +28,7 @@ type Post struct {
 	Content   string
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
+	Slug      string
 }
 
 type Upvote struct {
@@ -45,4 +46,5 @@ type User struct {
 	SuspendedUntil sql.NullTime
 	CreatedAt      sql.NullTime
 	UpdatedAt      sql.NullTime
+	Username       string
 }
