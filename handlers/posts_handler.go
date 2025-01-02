@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
+	"github.com/MyoMyatMin/expertly-backend/utils"
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/go-chi/chi/v5"
@@ -55,11 +56,18 @@ func CreatePostHandler(db *database.Queries, user database.User) http.Handler {
 			}
 		}
 
+		slug, err := utils.GenerateUniqueSlug(params.Title, db, r)
+		if err != nil {
+			http.Error(w, "Failed to generate unique slug", http.StatusInternalServerError) // 500
+			return
+		}
+
 		post, err := db.CreatePost(r.Context(), database.CreatePostParams{
 			ID:      uuid.New(),
 			Title:   params.Title,
 			Content: params.Content,
 			UserID:  user.ID,
+			Slug:    slug,
 		})
 		if err != nil {
 			http.Error(w, "Couldn't create post", http.StatusInternalServerError) // 500
@@ -94,38 +102,45 @@ func GetPostByIDHandler(db *database.Queries, user database.User) http.Handler {
 
 func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// postID := chi.URLParam(r, "id")
+		postID := chi.URLParam(r, "id")
 
-		// postUUID, err := uuid.Parse(postID)
-		// if err != nil {
-		// 	http.Error(w, "Invalid post ID", http.StatusBadRequest) // 400
-		// 	return
-		// }
+		postUUID, err := uuid.Parse(postID)
+		if err != nil {
+			http.Error(w, "Invalid post ID", http.StatusBadRequest) // 400
+			return
+		}
 
-		// type parameters struct {
-		// 	Title   string `json:"title"`
-		// 	Content string `json:"content"`
-		// }
+		type parameters struct {
+			Title   string `json:"title"`
+			Content string `json:"content"`
+		}
 
-		// var params parameters
+		var params parameters
 
-		// if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		// 	http.Error(w, "Invalid request body", http.StatusBadRequest) // 400
-		// 	return
-		// }
+		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest) // 400
+			return
+		}
 
-		// post, err := db.UpdatePost(r.Context(), database.UpdatePostParams{
-		// 	ID:      postUUID,
-		// 	Title:   params.Title,
-		// 	Content: params.Content,
-		// })
-		// if err != nil {
-		// 	http.Error(w, "Couldn't update post", http.StatusInternalServerError) // 500
-		// 	return
-		// }
+		slug, err := utils.GenerateUniqueSlug(params.Title, db, r)
+		if err != nil {
+			http.Error(w, "Failed to generate unique slug", http.StatusInternalServerError) // 500
+			return
+		}
+
+		post, err := db.UpdatePost(r.Context(), database.UpdatePostParams{
+			ID:      postUUID,
+			Title:   params.Title,
+			Content: params.Content,
+			Slug:    slug,
+		})
+		if err != nil {
+			http.Error(w, "Couldn't update post", http.StatusInternalServerError) // 500
+			return
+		}
 
 		w.WriteHeader(http.StatusOK) // 200
-		//json.NewEncoder(w).Encode(post)
+		json.NewEncoder(w).Encode(post)
 	})
 }
 

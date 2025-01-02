@@ -187,16 +187,17 @@ UPDATE posts
 SET
     title = $2,
     slug = $3,
-    content = $3,
+    content = $4,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
 RETURNING id, user_id, slug, title, content, created_at, updated_at
 `
 
 type UpdatePostParams struct {
-	ID    uuid.UUID
-	Title string
-	Slug  string
+	ID      uuid.UUID
+	Title   string
+	Slug    string
+	Content string
 }
 
 type UpdatePostRow struct {
@@ -210,7 +211,12 @@ type UpdatePostRow struct {
 }
 
 func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (UpdatePostRow, error) {
-	row := q.db.QueryRowContext(ctx, updatePost, arg.ID, arg.Title, arg.Slug)
+	row := q.db.QueryRowContext(ctx, updatePost,
+		arg.ID,
+		arg.Title,
+		arg.Slug,
+		arg.Content,
+	)
 	var i UpdatePostRow
 	err := row.Scan(
 		&i.ID,

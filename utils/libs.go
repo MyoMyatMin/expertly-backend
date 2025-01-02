@@ -46,3 +46,41 @@ func checkUsernameExists(username string, db *database.Queries, r *http.Request)
 	}
 	return true, nil
 }
+
+func GenerateUniqueSlug(title string, db *database.Queries, r *http.Request) (string, error) {
+	slug := strings.ReplaceAll(strings.ToLower(title), " ", "-")
+
+	exists, err := checkSlugExists(slug, db, r)
+	if err != nil {
+		return "", fmt.Errorf("failed to check slug availability: %v", err)
+	}
+
+	if exists {
+		suffixNumber := 1
+		uniqueSlug := fmt.Sprintf("%s%d", slug, suffixNumber)
+		for {
+			exists, err = checkSlugExists(uniqueSlug, db, r)
+			if err != nil {
+				return "", fmt.Errorf("failed to check slug availability: %v", err)
+			}
+			if !exists {
+				return uniqueSlug, nil
+			}
+			suffixNumber++
+			uniqueSlug = fmt.Sprintf("%s%d", slug, suffixNumber)
+		}
+	}
+
+	return slug, nil
+}
+
+func checkSlugExists(slug string, db *database.Queries, r *http.Request) (bool, error) {
+	_, err := db.GetPostBySlug(r.Context(), slug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
