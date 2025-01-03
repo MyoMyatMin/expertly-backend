@@ -21,6 +21,12 @@ type Comment struct {
 	UpdatedAt       time.Time
 }
 
+type Following struct {
+	FollowerID uuid.UUID
+	FolloweeID uuid.UUID
+	FollowedAt sql.NullTime
+}
+
 type Post struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID

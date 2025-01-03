@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
-	// Fetch user from the database
 )
 
 func SetUpRoutes(db *sql.DB) *chi.Mux {
@@ -40,44 +39,65 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.TestMiddlewaresHandler(queries, user).ServeHTTP(w, r)
 	}))
 
+	// Post routes
 	r.Get("/posts", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.GetAllPostsHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Post("/posts", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.CreatePostHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Put("/posts/{id}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.UpdatePostHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Get("/posts/{id}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.GetPostByIDHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Post("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.InsertUpvoteHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Delete("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.DeleteUpvoteHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Post("/posts/{postID}/comments", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.CreateCommentHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Delete("/posts/{postID}/comments/{commentID}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.DeleteCommentHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Patch("/posts/{postID}/comments/{commentID}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.UpdateCommentHandler(queries, user).ServeHTTP(w, r)
 	}))
-
 	r.Get("/posts/{postID}/comments", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
 		handlers.GetAllCommentsByPostHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	// Following routes
+	r.Get("/following", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.GetFollowingListHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Get("/followers", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.GetFollowerListHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Post("/follow", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.CreateFollowHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Delete("/follow/{id}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.DeleteFollowHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Get("/feed", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.GetFeedHandler(queries, user).ServeHTTP(w, r)
+	}))
+
+	r.Get("/users/{userID}/following", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.GetFollowingListByIDHandler(queries).ServeHTTP(w, r)
+	}))
+
+	r.Get("/users/{userID}/followers", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, user database.User) {
+		handlers.GetFollowerListByIDHandler(queries).ServeHTTP(w, r)
 	}))
 
 	return r
