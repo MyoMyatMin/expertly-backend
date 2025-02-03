@@ -1,9 +1,8 @@
 -- +goose Up
 CREATE TABLE following (
-    follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, 
-    followee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, 
-    followed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-    PRIMARY KEY (follower_id, followee_id) 
+    follower_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, 
+    following_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, 
+    PRIMARY KEY (follower_id, following_id) 
 );
 
 -- +goose Down
