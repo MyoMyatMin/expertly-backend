@@ -12,7 +12,7 @@ import (
 )
 
 type Comment struct {
-	ID              uuid.UUID
+	CommentID       uuid.UUID
 	PostID          uuid.UUID
 	UserID          uuid.UUID
 	ParentCommentID uuid.NullUUID
@@ -21,20 +21,25 @@ type Comment struct {
 	UpdatedAt       time.Time
 }
 
+type Contributor struct {
+	UserID          uuid.UUID
+	ExpertiseFields []string
+	CreatedAt       sql.NullTime
+}
+
 type Following struct {
-	FollowerID uuid.UUID
-	FolloweeID uuid.UUID
-	FollowedAt sql.NullTime
+	FollowerID  uuid.UUID
+	FollowingID uuid.UUID
 }
 
 type Post struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
+	PostID    uuid.UUID
 	Title     string
 	Content   string
+	Slug      string
+	UserID    uuid.UUID
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
-	Slug      string
 }
 
 type Upvote struct {
@@ -44,13 +49,12 @@ type Upvote struct {
 }
 
 type User struct {
-	ID             uuid.UUID
+	UserID         uuid.UUID
 	Name           string
 	Email          string
+	Username       string
 	Password       string
-	Role           sql.NullString
 	SuspendedUntil sql.NullTime
 	CreatedAt      sql.NullTime
 	UpdatedAt      sql.NullTime
-	Username       string
 }

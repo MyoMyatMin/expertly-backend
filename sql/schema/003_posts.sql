@@ -4,7 +4,7 @@ CREATE TABLE posts(
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
-    user_id UUID REFERENCES contributors(user_id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

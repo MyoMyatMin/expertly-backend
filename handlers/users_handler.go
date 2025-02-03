@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,28 +21,28 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-func generateAccessToken(userID uuid.UUID, role string) (string, error) {
+func generateAccessToken(userID uuid.UUID) (string, error) {
 	godotenv.Load(".env")
 	var jwtSecretKey = os.Getenv("SECRET_KEY")
 	expirationTime := time.Now().Add(1 * time.Hour).Unix()
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"role":    role,
-		"exp":     expirationTime,
+
+		"exp": expirationTime,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(jwtSecretKey))
 }
 
-func generateRefreshToken(userID uuid.UUID, role string) (string, error) {
+func generateRefreshToken(userID uuid.UUID) (string, error) {
 	godotenv.Load(".env")
 	var jwtSecretKey = os.Getenv("SECRET_KEY")
 	expirationTime := time.Now().Add(24 * time.Hour).Unix()
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"role":    role,
-		"exp":     expirationTime,
+
+		"exp": expirationTime,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -67,18 +66,6 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		validRoles := map[string]bool{
-			"user":        true,
-			"contributor": true,
-			"moderator":   true,
-			"superadmin":  true,
-		}
-
-		role := "user"
-		if params.Roles != "" && validRoles[params.Roles] {
-			role = params.Roles
-		}
-
 		username, err := utils.GenerateUniqueUsername(params.Name, db, r)
 		if err != nil {
 			http.Error(w, "Couldn't generate unique username", http.StatusInternalServerError)
@@ -91,14 +78,11 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		roleNull := sql.NullString{String: role, Valid: true}
-
 		user, err := db.CreateUser(r.Context(), database.CreateUserParams{
-			ID:       uuid.New(),
+			UserID:   uuid.New(),
 			Name:     params.Name,
 			Email:    params.Email,
 			Password: string(passwordHash),
-			Role:     roleNull,
 			Username: username,
 		})
 
@@ -107,13 +91,13 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user.ID, role)
+		accessToken, err := generateAccessToken(user.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't generate access token", http.StatusInternalServerError)
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(user.ID, role)
+		refreshToken, err := generateRefreshToken(user.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't generate refresh token", http.StatusInternalServerError)
 			return
@@ -174,13 +158,13 @@ func LoginHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user.ID, user.Role.String)
+		accessToken, err := generateAccessToken(user.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't generate access token", http.StatusInternalServerError)
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(user.ID, user.Role.String)
+		refreshToken, err := generateRefreshToken(user.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't generate refresh token", http.StatusInternalServerError)
 			return

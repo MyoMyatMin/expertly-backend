@@ -12,13 +12,24 @@ import (
 )
 
 const createComment = `-- name: CreateComment :one
-INSERT INTO comments (id, post_id, user_id, parent_comment_id, content, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-RETURNING id, post_id, user_id, parent_comment_id, content, created_at, updated_at
+INSERT INTO comments (
+    comment_id,
+    post_id,
+    user_id,
+    parent_comment_id,
+    content
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5
+)
+RETURNING comment_id, post_id, user_id, parent_comment_id, content, created_at, updated_at
 `
 
 type CreateCommentParams struct {
-	ID              uuid.UUID
+	CommentID       uuid.UUID
 	PostID          uuid.UUID
 	UserID          uuid.UUID
 	ParentCommentID uuid.NullUUID
@@ -27,7 +38,7 @@ type CreateCommentParams struct {
 
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error) {
 	row := q.db.QueryRowContext(ctx, createComment,
-		arg.ID,
+		arg.CommentID,
 		arg.PostID,
 		arg.UserID,
 		arg.ParentCommentID,
@@ -35,7 +46,7 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 	)
 	var i Comment
 	err := row.Scan(
-		&i.ID,
+		&i.CommentID,
 		&i.PostID,
 		&i.UserID,
 		&i.ParentCommentID,
@@ -48,16 +59,23 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 
 const deleteComment = `-- name: DeleteComment :exec
 DELETE FROM comments
-WHERE id = $1
+WHERE comment_id = $1
 `
 
-func (q *Queries) DeleteComment(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteComment, id)
+func (q *Queries) DeleteComment(ctx context.Context, commentID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteComment, commentID)
 	return err
 }
 
 const getCommentsByPost = `-- name: GetCommentsByPost :many
-SELECT id, post_id, user_id, parent_comment_id, content, created_at, updated_at
+SELECT 
+    comment_id, 
+    post_id, 
+    user_id, 
+    parent_comment_id, 
+    content, 
+    created_at, 
+    updated_at
 FROM comments
 WHERE post_id = $1
 ORDER BY created_at ASC
@@ -73,7 +91,7 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, postID uuid.UUID) ([]Co
 	for rows.Next() {
 		var i Comment
 		if err := rows.Scan(
-			&i.ID,
+			&i.CommentID,
 			&i.PostID,
 			&i.UserID,
 			&i.ParentCommentID,
@@ -95,21 +113,24 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, postID uuid.UUID) ([]Co
 }
 
 const updateComment = `-- name: UpdateComment :one
-UPDATE comments SET content = $2, updated_at = NOW()
-WHERE id = $1
-RETURNING id, post_id, user_id, parent_comment_id, content, created_at, updated_at
+UPDATE comments 
+SET 
+    content = $2, 
+    updated_at = CURRENT_TIMESTAMP
+WHERE comment_id = $1
+RETURNING comment_id, post_id, user_id, parent_comment_id, content, created_at, updated_at
 `
 
 type UpdateCommentParams struct {
-	ID      uuid.UUID
-	Content string
+	CommentID uuid.UUID
+	Content   string
 }
 
 func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (Comment, error) {
-	row := q.db.QueryRowContext(ctx, updateComment, arg.ID, arg.Content)
+	row := q.db.QueryRowContext(ctx, updateComment, arg.CommentID, arg.Content)
 	var i Comment
 	err := row.Scan(
-		&i.ID,
+		&i.CommentID,
 		&i.PostID,
 		&i.UserID,
 		&i.ParentCommentID,

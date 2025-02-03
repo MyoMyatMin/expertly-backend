@@ -43,11 +43,11 @@ func CreateCommentHandler(db *database.Queries, user database.User) http.Handler
 		}
 
 		comment, err := db.CreateComment(r.Context(), database.CreateCommentParams{
-			ID:              uuid.New(),
+			CommentID:       uuid.New(),
 			Content:         params.Content,
 			ParentCommentID: params.ParentCommentID,
 			PostID:          postID,
-			UserID:          user.ID,
+			UserID:          user.UserID,
 		})
 
 		if err != nil {
@@ -84,8 +84,8 @@ func UpdateCommentHandler(db *database.Queries, user database.User) http.Handler
 		}
 
 		comment, err := db.UpdateComment(r.Context(), database.UpdateCommentParams{
-			ID:      commentID,
-			Content: params.Content,
+			CommentID: commentID,
+			Content:   params.Content,
 		})
 		if err != nil {
 			http.Error(w, "Failed to update comment: "+err.Error(), http.StatusInternalServerError)
@@ -138,7 +138,7 @@ func GetAllCommentsByPostHandler(db *database.Queries, user database.User) http.
 
 		for _, dbcomment := range dbcomments {
 			comments = append(comments, Comment{
-				ID:              dbcomment.ID,
+				ID:              dbcomment.CommentID,
 				Content:         dbcomment.Content,
 				ParentCommentID: dbcomment.ParentCommentID,
 				PostID:          dbcomment.PostID,

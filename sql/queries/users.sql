@@ -1,52 +1,57 @@
+
 -- name: CreateUser :one
-INSERT INTO users(id, 
+INSERT INTO users(
+    user_id, 
     name, 
     username,
     email, 
     password, 
-    role, 
-    suspended_until) VALUES
-    (
-        $1, 
-        $2, 
-        $3, 
-        $4, 
-        $5, 
-        $6,
-        $7
-    )
-    RETURNING id, name, email, role, suspended_until, created_at, updated_at,username;
+    suspended_until
+) VALUES (
+    $1, 
+    $2, 
+    $3, 
+    $4, 
+    $5, 
+    $6
+)
+RETURNING user_id, name, email, username, suspended_until, created_at, updated_at;
 
 -- name: GetUserByEmail :one
-SELECT id, 
+SELECT 
+    user_id, 
     name, 
     username,
     email, 
     password, 
-    role, 
     suspended_until, 
     created_at, 
-    updated_at FROM users WHERE email = $1;
+    updated_at 
+FROM users 
+WHERE email = $1;
 
 -- name: GetUserById :one
-SELECT id, 
+SELECT 
+    user_id, 
     name, 
     username,
     email, 
     password, 
-    role, 
     suspended_until, 
     created_at, 
-    updated_at FROM users WHERE id = $1;
-
+    updated_at 
+FROM users 
+WHERE user_id = $1;
 
 -- name: GetUserByUsername :one
-SELECT id, 
+SELECT 
+    user_id, 
     name, 
     username,
     email, 
     password, 
-    role, 
     suspended_until, 
     created_at, 
-    updated_at FROM users WHERE username = $1;
+    updated_at 
+FROM users 
+WHERE username = $1;

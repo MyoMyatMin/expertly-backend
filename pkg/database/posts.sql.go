@@ -13,19 +13,24 @@ import (
 )
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (id, user_id, slug, title, content)
-VALUES (
+INSERT INTO posts (
+    post_id,
+    user_id,
+    slug,
+    title,
+    content
+) VALUES (
     $1,
     $2,
     $3,
     $4,
     $5
 )
-RETURNING id, user_id, slug, title, content, created_at, updated_at
+RETURNING post_id, user_id, slug, title, content, created_at, updated_at
 `
 
 type CreatePostParams struct {
-	ID      uuid.UUID
+	PostID  uuid.UUID
 	UserID  uuid.UUID
 	Slug    string
 	Title   string
@@ -33,7 +38,7 @@ type CreatePostParams struct {
 }
 
 type CreatePostRow struct {
-	ID        uuid.UUID
+	PostID    uuid.UUID
 	UserID    uuid.UUID
 	Slug      string
 	Title     string
@@ -44,7 +49,7 @@ type CreatePostRow struct {
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (CreatePostRow, error) {
 	row := q.db.QueryRowContext(ctx, createPost,
-		arg.ID,
+		arg.PostID,
 		arg.UserID,
 		arg.Slug,
 		arg.Title,
@@ -52,7 +57,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (CreateP
 	)
 	var i CreatePostRow
 	err := row.Scan(
-		&i.ID,
+		&i.PostID,
 		&i.UserID,
 		&i.Slug,
 		&i.Title,
@@ -65,22 +70,29 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (CreateP
 
 const deletePost = `-- name: DeletePost :exec
 DELETE FROM posts
-WHERE id = $1
+WHERE post_id = $1
 `
 
-func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deletePost, id)
+func (q *Queries) DeletePost(ctx context.Context, postID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deletePost, postID)
 	return err
 }
 
 const getPost = `-- name: GetPost :one
-SELECT id, user_id, slug, title, content, created_at, updated_at
+SELECT 
+    post_id, 
+    user_id, 
+    slug, 
+    title, 
+    content, 
+    created_at, 
+    updated_at
 FROM posts
-WHERE id = $1
+WHERE post_id = $1
 `
 
 type GetPostRow struct {
-	ID        uuid.UUID
+	PostID    uuid.UUID
 	UserID    uuid.UUID
 	Slug      string
 	Title     string
@@ -89,11 +101,11 @@ type GetPostRow struct {
 	UpdatedAt sql.NullTime
 }
 
-func (q *Queries) GetPost(ctx context.Context, id uuid.UUID) (GetPostRow, error) {
-	row := q.db.QueryRowContext(ctx, getPost, id)
+func (q *Queries) GetPost(ctx context.Context, postID uuid.UUID) (GetPostRow, error) {
+	row := q.db.QueryRowContext(ctx, getPost, postID)
 	var i GetPostRow
 	err := row.Scan(
-		&i.ID,
+		&i.PostID,
 		&i.UserID,
 		&i.Slug,
 		&i.Title,
@@ -105,13 +117,20 @@ func (q *Queries) GetPost(ctx context.Context, id uuid.UUID) (GetPostRow, error)
 }
 
 const getPostBySlug = `-- name: GetPostBySlug :one
-SELECT id, user_id, slug, title, content, created_at, updated_at
+SELECT 
+    post_id, 
+    user_id, 
+    slug, 
+    title, 
+    content, 
+    created_at, 
+    updated_at
 FROM posts
 WHERE slug = $1
 `
 
 type GetPostBySlugRow struct {
-	ID        uuid.UUID
+	PostID    uuid.UUID
 	UserID    uuid.UUID
 	Slug      string
 	Title     string
@@ -124,7 +143,7 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (GetPostBySlug
 	row := q.db.QueryRowContext(ctx, getPostBySlug, slug)
 	var i GetPostBySlugRow
 	err := row.Scan(
-		&i.ID,
+		&i.PostID,
 		&i.UserID,
 		&i.Slug,
 		&i.Title,
@@ -136,13 +155,20 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (GetPostBySlug
 }
 
 const listPosts = `-- name: ListPosts :many
-SELECT id, user_id, slug, title, content, created_at, updated_at
+SELECT 
+    post_id, 
+    user_id, 
+    slug, 
+    title, 
+    content, 
+    created_at, 
+    updated_at
 FROM posts
 ORDER BY created_at DESC
 `
 
 type ListPostsRow struct {
-	ID        uuid.UUID
+	PostID    uuid.UUID
 	UserID    uuid.UUID
 	Slug      string
 	Title     string
@@ -161,7 +187,7 @@ func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
 	for rows.Next() {
 		var i ListPostsRow
 		if err := rows.Scan(
-			&i.ID,
+			&i.PostID,
 			&i.UserID,
 			&i.Slug,
 			&i.Title,
@@ -189,19 +215,19 @@ SET
     slug = $3,
     content = $4,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING id, user_id, slug, title, content, created_at, updated_at
+WHERE post_id = $1
+RETURNING post_id, user_id, slug, title, content, created_at, updated_at
 `
 
 type UpdatePostParams struct {
-	ID      uuid.UUID
+	PostID  uuid.UUID
 	Title   string
 	Slug    string
 	Content string
 }
 
 type UpdatePostRow struct {
-	ID        uuid.UUID
+	PostID    uuid.UUID
 	UserID    uuid.UUID
 	Slug      string
 	Title     string
@@ -212,14 +238,14 @@ type UpdatePostRow struct {
 
 func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (UpdatePostRow, error) {
 	row := q.db.QueryRowContext(ctx, updatePost,
-		arg.ID,
+		arg.PostID,
 		arg.Title,
 		arg.Slug,
 		arg.Content,
 	)
 	var i UpdatePostRow
 	err := row.Scan(
-		&i.ID,
+		&i.PostID,
 		&i.UserID,
 		&i.Slug,
 		&i.Title,

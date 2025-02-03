@@ -11,7 +11,7 @@ import (
 
 func GetFollowingListHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		following, err := db.GetFollowingList(r.Context(), user.ID)
+		following, err := db.GetFollowingList(r.Context(), user.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't get following list", http.StatusInternalServerError)
 			return
@@ -24,7 +24,7 @@ func GetFollowingListHandler(db *database.Queries, user database.User) http.Hand
 
 func GetFollowerListHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		followers, err := db.GetFollowerList(r.Context(), user.ID)
+		followers, err := db.GetFollowerList(r.Context(), user.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't get follower list", http.StatusInternalServerError)
 			return
@@ -81,7 +81,7 @@ func GetFollowerListByIDHandler(db *database.Queries) http.Handler {
 func CreateFollowHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
-			FolloweeID uuid.UUID `json:"followee_id"`
+			FollowingID uuid.UUID `json:"followee_id"`
 		}
 
 		var params parameters
@@ -91,8 +91,8 @@ func CreateFollowHandler(db *database.Queries, user database.User) http.Handler 
 		}
 
 		err := db.CreateFollow(r.Context(), database.CreateFollowParams{
-			FollowerID: user.ID,
-			FolloweeID: params.FolloweeID,
+			FollowerID:  user.UserID,
+			FollowingID: params.FollowingID,
 		})
 		if err != nil {
 			http.Error(w, "Couldn't follow user", http.StatusInternalServerError) // 500
@@ -105,17 +105,17 @@ func CreateFollowHandler(db *database.Queries, user database.User) http.Handler 
 
 func DeleteFollowHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		followeeID := chi.URLParam(r, "id")
+		FollowingID := chi.URLParam(r, "id")
 
-		followeeUUID, err := uuid.Parse(followeeID)
+		followeeUUID, err := uuid.Parse(FollowingID)
 		if err != nil {
 			http.Error(w, "Invalid followee ID", http.StatusBadRequest) // 400
 			return
 		}
 
 		err = db.DeleteFollow(r.Context(), database.DeleteFollowParams{
-			FollowerID: user.ID,
-			FolloweeID: followeeUUID,
+			FollowerID:  user.UserID,
+			FollowingID: followeeUUID,
 		})
 		if err != nil {
 			http.Error(w, "Couldn't unfollow user", http.StatusInternalServerError) // 500
@@ -129,7 +129,7 @@ func DeleteFollowHandler(db *database.Queries, user database.User) http.Handler 
 // GetFeedHandler for fetching the feed
 func GetFeedHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		feed, err := db.GetFeed(r.Context(), user.ID)
+		feed, err := db.GetFeed(r.Context(), user.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't get feed", http.StatusInternalServerError)
 			return

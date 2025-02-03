@@ -30,7 +30,7 @@ func GetAllPostsHandler(db *database.Queries, user database.User) http.Handler {
 	})
 }
 
-func CreatePostHandler(db *database.Queries, user database.User) http.Handler {
+func CreatePostHandler(db *database.Queries, contributor database.Contributor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
 			Title   string   `json:"title"`
@@ -63,10 +63,10 @@ func CreatePostHandler(db *database.Queries, user database.User) http.Handler {
 		}
 
 		post, err := db.CreatePost(r.Context(), database.CreatePostParams{
-			ID:      uuid.New(),
+			PostID:  uuid.New(),
 			Title:   params.Title,
 			Content: params.Content,
-			UserID:  user.ID,
+			UserID:  contributor.UserID,
 			Slug:    slug,
 		})
 		if err != nil {
@@ -129,7 +129,7 @@ func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
 		}
 
 		post, err := db.UpdatePost(r.Context(), database.UpdatePostParams{
-			ID:      postUUID,
+			PostID:  postUUID,
 			Title:   params.Title,
 			Content: params.Content,
 			Slug:    slug,

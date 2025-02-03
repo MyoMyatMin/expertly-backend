@@ -42,13 +42,13 @@ func RefreshTokenHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		accessToken, err := generateAccessToken(claims.UserID, claims.Role)
+		accessToken, err := generateAccessToken(claims.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't generate new access token", http.StatusInternalServerError)
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(claims.UserID, claims.Role)
+		refreshToken, err := generateRefreshToken(claims.UserID)
 		if err != nil {
 			http.Error(w, "Couldn't generate new refresh token", http.StatusInternalServerError)
 			return

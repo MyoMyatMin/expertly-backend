@@ -7,46 +7,45 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const createFollow = `-- name: CreateFollow :exec
-INSERT INTO following (follower_id, followee_id)
+INSERT INTO following (follower_id, following_id)
 VALUES ($1, $2)
 ON CONFLICT DO NOTHING
 `
 
 type CreateFollowParams struct {
-	FollowerID uuid.UUID
-	FolloweeID uuid.UUID
+	FollowerID  uuid.UUID
+	FollowingID uuid.UUID
 }
 
 func (q *Queries) CreateFollow(ctx context.Context, arg CreateFollowParams) error {
-	_, err := q.db.ExecContext(ctx, createFollow, arg.FollowerID, arg.FolloweeID)
+	_, err := q.db.ExecContext(ctx, createFollow, arg.FollowerID, arg.FollowingID)
 	return err
 }
 
 const deleteFollow = `-- name: DeleteFollow :exec
 DELETE FROM following
-WHERE follower_id = $1 AND followee_id = $2
+WHERE follower_id = $1 AND following_id = $2
 `
 
 type DeleteFollowParams struct {
-	FollowerID uuid.UUID
-	FolloweeID uuid.UUID
+	FollowerID  uuid.UUID
+	FollowingID uuid.UUID
 }
 
 func (q *Queries) DeleteFollow(ctx context.Context, arg DeleteFollowParams) error {
-	_, err := q.db.ExecContext(ctx, deleteFollow, arg.FollowerID, arg.FolloweeID)
+	_, err := q.db.ExecContext(ctx, deleteFollow, arg.FollowerID, arg.FollowingID)
 	return err
 }
 
 const getFeed = `-- name: GetFeed :many
-SELECT posts.id, posts.user_id, posts.title, posts.content, posts.created_at, posts.updated_at, posts.slug
+SELECT posts.post_id, posts.title, posts.content, posts.slug, posts.user_id, posts.created_at, posts.updated_at
 FROM posts
-JOIN following ON posts.user_id = following.followee_id
+JOIN following ON posts.user_id = following.following_id
 WHERE following.follower_id = $1
 ORDER BY posts.created_at DESC
 `
@@ -61,13 +60,13 @@ func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]Post, er
 	for rows.Next() {
 		var i Post
 		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
+			&i.PostID,
 			&i.Title,
 			&i.Content,
+			&i.Slug,
+			&i.UserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Slug,
 		); err != nil {
 			return nil, err
 		}
@@ -83,29 +82,25 @@ func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]Post, er
 }
 
 const getFollowerList = `-- name: GetFollowerList :many
-SELECT follower_id, followed_at
+SELECT 
+    follower_id
 FROM following
-WHERE followee_id = $1
+WHERE following_id = $1
 `
 
-type GetFollowerListRow struct {
-	FollowerID uuid.UUID
-	FollowedAt sql.NullTime
-}
-
-func (q *Queries) GetFollowerList(ctx context.Context, followeeID uuid.UUID) ([]GetFollowerListRow, error) {
-	rows, err := q.db.QueryContext(ctx, getFollowerList, followeeID)
+func (q *Queries) GetFollowerList(ctx context.Context, followingID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, getFollowerList, followingID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetFollowerListRow
+	var items []uuid.UUID
 	for rows.Next() {
-		var i GetFollowerListRow
-		if err := rows.Scan(&i.FollowerID, &i.FollowedAt); err != nil {
+		var follower_id uuid.UUID
+		if err := rows.Scan(&follower_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, follower_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -117,29 +112,25 @@ func (q *Queries) GetFollowerList(ctx context.Context, followeeID uuid.UUID) ([]
 }
 
 const getFollowingList = `-- name: GetFollowingList :many
-SELECT followee_id, followed_at
+SELECT 
+    following_id
 FROM following
 WHERE follower_id = $1
 `
 
-type GetFollowingListRow struct {
-	FolloweeID uuid.UUID
-	FollowedAt sql.NullTime
-}
-
-func (q *Queries) GetFollowingList(ctx context.Context, followerID uuid.UUID) ([]GetFollowingListRow, error) {
+func (q *Queries) GetFollowingList(ctx context.Context, followerID uuid.UUID) ([]uuid.UUID, error) {
 	rows, err := q.db.QueryContext(ctx, getFollowingList, followerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetFollowingListRow
+	var items []uuid.UUID
 	for rows.Next() {
-		var i GetFollowingListRow
-		if err := rows.Scan(&i.FolloweeID, &i.FollowedAt); err != nil {
+		var following_id uuid.UUID
+		if err := rows.Scan(&following_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, following_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

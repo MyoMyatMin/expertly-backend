@@ -30,8 +30,13 @@ func (q *Queries) DeleteUpvote(ctx context.Context, arg DeleteUpvoteParams) (Upv
 }
 
 const insertUpvote = `-- name: InsertUpvote :one
-INSERT INTO upvotes (user_id, post_id)
-VALUES ($1, $2)
+INSERT INTO upvotes (
+    user_id,
+    post_id
+) VALUES (
+    $1,
+    $2
+)
 RETURNING user_id, post_id, created_at
 `
 
@@ -45,4 +50,36 @@ func (q *Queries) InsertUpvote(ctx context.Context, arg InsertUpvoteParams) (Upv
 	var i Upvote
 	err := row.Scan(&i.UserID, &i.PostID, &i.CreatedAt)
 	return i, err
+}
+
+const listUpvotesByPost = `-- name: ListUpvotesByPost :many
+SELECT 
+    user_id, 
+    post_id, 
+    created_at
+FROM upvotes
+WHERE post_id = $1
+`
+
+func (q *Queries) ListUpvotesByPost(ctx context.Context, postID uuid.UUID) ([]Upvote, error) {
+	rows, err := q.db.QueryContext(ctx, listUpvotesByPost, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Upvote
+	for rows.Next() {
+		var i Upvote
+		if err := rows.Scan(&i.UserID, &i.PostID, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -14,10 +14,19 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Define handler types for User and Contributor
 type HandlerWithUser func(http.ResponseWriter, *http.Request, database.User)
+type HandlerWithContributor func(http.ResponseWriter, *http.Request, database.Contributor)
 
-func MiddlewareAuth(db *database.Queries, handler HandlerWithUser) http.HandlerFunc {
+// MiddlewareAuth is a generic middleware that works for both User and Contributor
+func MiddlewareAuth(
+	db *database.Queries,
+	handlerWithUser HandlerWithUser,
+	handlerWithContributor HandlerWithContributor,
+	isContributor bool, // Flag to determine if the middleware is for Contributor
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Extract and validate the JWT token
 		tokenString, err := extractTokenCookie(r)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
@@ -30,34 +39,56 @@ func MiddlewareAuth(db *database.Queries, handler HandlerWithUser) http.HandlerF
 			return
 		}
 
+		// Extract user ID from claims
 		userID, err := getUserIDFromClaims(claims)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		userRow, err := db.GetUserById(r.Context(), userID)
-		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, "User not found")
-			return
-		}
+		// Fetch the user or contributor based on the flag
+		if isContributor {
+			// Fetch contributor
+			contributorRow, err := db.GetContributorByUserId(r.Context(), userID)
+			if err != nil {
+				respondWithError(w, http.StatusUnauthorized, "Contributor not found")
+				return
+			}
 
-		user := database.User{
-			ID:             userRow.ID,
-			Name:           userRow.Name,
-			Username:       userRow.Username,
-			Email:          userRow.Email,
-			Password:       userRow.Password,
-			Role:           userRow.Role,
-			SuspendedUntil: userRow.SuspendedUntil,
-			CreatedAt:      userRow.CreatedAt,
-			UpdatedAt:      userRow.UpdatedAt,
-		}
+			contributor := database.Contributor{
+				UserID:          contributorRow.UserID,
+				ExpertiseFields: contributorRow.ExpertiseFields,
+				CreatedAt:       contributorRow.CreatedAt,
+			}
 
-		handler(w, r, user)
+			// Call the Contributor-specific handler
+			handlerWithContributor(w, r, contributor)
+		} else {
+			// Fetch user
+			userRow, err := db.GetUserById(r.Context(), userID)
+			if err != nil {
+				respondWithError(w, http.StatusUnauthorized, "User not found")
+				return
+			}
+
+			user := database.User{
+				UserID:         userRow.UserID,
+				Name:           userRow.Name,
+				Username:       userRow.Username,
+				Email:          userRow.Email,
+				Password:       userRow.Password,
+				SuspendedUntil: userRow.SuspendedUntil,
+				CreatedAt:      userRow.CreatedAt,
+				UpdatedAt:      userRow.UpdatedAt,
+			}
+
+			// Call the User-specific handler
+			handlerWithUser(w, r, user)
+		}
 	}
 }
 
+// Helper functions remain unchanged
 func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -88,20 +119,16 @@ func parseJWTToken(tokenString string) (jwt.MapClaims, error) {
 	if jwtSecret == "" {
 		return nil, errors.New("missing JWT secret key")
 	}
-
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(jwtSecret), nil
 	})
-
 	if isTokenExpired(claims) {
 		return nil, errors.New("token is expired")
 	}
-
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
-
 	return claims, nil
 }
 
@@ -110,7 +137,6 @@ func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 	if !ok {
 		return uuid.Nil, errors.New("invalid token claims: user_id missing or not a string")
 	}
-
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		return uuid.Nil, errors.New("invalid user ID format in token")
@@ -118,17 +144,12 @@ func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 	return userID, nil
 }
 
-// isTokenExpired checks if the JWT token has expired.
 func isTokenExpired(claims jwt.MapClaims) bool {
-	// Retrieve expiration time from claims
 	expTime, ok := claims["exp"].(float64)
 	if !ok {
 		return true // If there's no "exp" claim, consider it invalid
 	}
-
-	// Compare expiration time with current time
 	expTimeUnix := int64(expTime)
 	currentTime := time.Now().Unix()
-
 	return currentTime > expTimeUnix
 }

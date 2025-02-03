@@ -19,7 +19,7 @@ func InsertUpvoteHandler(db *database.Queries, user database.User) http.Handler 
 		}
 
 		upvote := database.Upvote{
-			UserID: user.ID,
+			UserID: user.UserID,
 			PostID: postUUID,
 		}
 
@@ -48,7 +48,7 @@ func DeleteUpvoteHandler(db *database.Queries, user database.User) http.Handler 
 		}
 
 		upvote := database.Upvote{
-			UserID: user.ID,
+			UserID: user.UserID,
 			PostID: postUUID,
 		}
 
