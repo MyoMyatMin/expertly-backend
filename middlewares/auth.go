@@ -174,3 +174,113 @@ func isTokenExpired(claims jwt.MapClaims) bool {
 	currentTime := time.Now().Unix()
 	return currentTime > expTimeUnix
 }
+
+/**
+
+// MiddlewareAuth handles authentication for different user types
+func MiddlewareAuth(
+    db *database.Queries,
+    handlerWithUser HandlerWithUser,
+    handlerWithContributor HandlerWithContributor,
+    handlerWithModerator HandlerWithModerator,
+    authType string, // "user", "contributor", or "moderator"
+) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        // Extract the token
+        tokenString, err := extractTokenCookie(r)
+        if err != nil {
+            respondWithError(w, http.StatusUnauthorized, err.Error())
+            return
+        }
+
+        // Parse and validate the token
+        claims, err := parseJWTToken(tokenString)
+        if err != nil {
+            respondWithError(w, http.StatusUnauthorized, err.Error())
+            return
+        }
+
+        // Extract user ID
+        userID, err := getUserIDFromClaims(claims)
+        if err != nil {
+            respondWithError(w, http.StatusUnauthorized, err.Error())
+            return
+        }
+
+        // Try authentication based on the given authType
+        switch authType {
+        case "moderator":
+            authenticateModerator(db, userID, handlerWithModerator, w, r)
+        case "contributor":
+            authenticateContributor(db, userID, handlerWithContributor, w, r)
+        case "user":
+            authenticateUser(db, userID, handlerWithUser, w, r)
+        default:
+            respondWithError(w, http.StatusBadRequest, "Invalid authentication type")
+        }
+    }
+}
+
+// authenticateUser performs the authentication logic for user type
+func authenticateUser(db *database.Queries, userID uuid.UUID, handler HandlerWithUser, w http.ResponseWriter, r *http.Request) {
+    userRow, err := db.GetUserById(r.Context(), userID)
+    if err != nil {
+        respondWithError(w, http.StatusUnauthorized, "User not found")
+        return
+    }
+
+    user := database.User{
+        UserID:         userRow.UserID,
+        Name:           userRow.Name,
+        Username:       userRow.Username,
+        Email:          userRow.Email,
+        Password:       userRow.Password,
+        SuspendedUntil: userRow.SuspendedUntil,
+        CreatedAt:      userRow.CreatedAt,
+        UpdatedAt:      userRow.UpdatedAt,
+    }
+
+    handler(w, r, user)
+}
+
+// authenticateContributor performs the authentication logic for contributor type
+func authenticateContributor(db *database.Queries, userID uuid.UUID, handler HandlerWithContributor, w http.ResponseWriter, r *http.Request) {
+    contributorRow, err := db.GetContributorByUserId(r.Context(), userID)
+    if err != nil {
+        respondWithError(w, http.StatusUnauthorized, "Contributor not found")
+        return
+    }
+
+    contributor := database.Contributor{
+        UserID:          contributorRow.UserID,
+        ExpertiseFields: contributorRow.ExpertiseFields,
+        CreatedAt:       contributorRow.CreatedAt,
+    }
+
+    handler(w, r, contributor)
+}
+
+// authenticateModerator performs the authentication logic for moderator type
+func authenticateModerator(db *database.Queries, userID uuid.UUID, handler HandlerWithModerator, w http.ResponseWriter, r *http.Request) {
+    moderatorRow, err := db.GetModeratorById(r.Context(), userID)
+    if err != nil {
+        respondWithError(w, http.StatusUnauthorized, "Moderator not found")
+        return
+    }
+
+    moderator := database.Moderator{
+        ModeratorID: moderatorRow.ModeratorID,
+        CreatedAt:   moderatorRow.CreatedAt,
+    }
+
+    handler(w, r, moderator)
+}
+
+// respondWithError sends a JSON error response with a detailed message
+func respondWithError(w http.ResponseWriter, statusCode int, message string) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(statusCode)
+    response := map[string]string{"error": message}
+    _ = json.NewEncoder(w).Encode(response)
+}
+**/

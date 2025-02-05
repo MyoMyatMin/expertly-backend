@@ -53,6 +53,19 @@ type Post struct {
 	UpdatedAt sql.NullTime
 }
 
+type Report struct {
+	ReportID        uuid.UUID
+	ReportedBy      uuid.UUID
+	TargetPostID    uuid.NullUUID
+	TargetUserID    uuid.NullUUID
+	TargetCommentID uuid.NullUUID
+	Reason          string
+	Status          sql.NullString
+	ReviewedAt      sql.NullTime
+	Reviewedby      uuid.NullUUID
+	CreatedAt       sql.NullTime
+}
+
 type Upvote struct {
 	UserID    uuid.UUID
 	PostID    uuid.UUID
