@@ -14,19 +14,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Define handler types for User and Contributor
+// Function type definitions for different authentication handlers
 type HandlerWithUser func(http.ResponseWriter, *http.Request, database.User)
 type HandlerWithContributor func(http.ResponseWriter, *http.Request, database.Contributor)
+type HandlerWithModerator func(http.ResponseWriter, *http.Request, database.Moderator)
 
-// MiddlewareAuth is a generic middleware that works for both User and Contributor
+// MiddlewareAuth handles authentication for different user types
 func MiddlewareAuth(
 	db *database.Queries,
 	handlerWithUser HandlerWithUser,
 	handlerWithContributor HandlerWithContributor,
-	isContributor bool, // Flag to determine if the middleware is for Contributor
+	handlerWithModerator HandlerWithModerator,
+	authType string, // "user", "contributor", or "moderator"
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract and validate the JWT token
 		tokenString, err := extractTokenCookie(r)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
@@ -46,9 +47,23 @@ func MiddlewareAuth(
 			return
 		}
 
-		// Fetch the user or contributor based on the flag
-		if isContributor {
-			// Fetch contributor
+		switch authType {
+		case "moderator":
+			// Fetch moderator
+			moderatorRow, err := db.GetModeratorById(r.Context(), userID)
+			if err != nil {
+				respondWithError(w, http.StatusUnauthorized, "Moderator not found")
+				return
+			}
+
+			moderator := database.Moderator{
+				ModeratorID: moderatorRow.ModeratorID,
+				CreatedAt:   moderatorRow.CreatedAt,
+			}
+
+			handlerWithModerator(w, r, moderator)
+
+		case "contributor":
 			contributorRow, err := db.GetContributorByUserId(r.Context(), userID)
 			if err != nil {
 				respondWithError(w, http.StatusUnauthorized, "Contributor not found")
@@ -61,10 +76,9 @@ func MiddlewareAuth(
 				CreatedAt:       contributorRow.CreatedAt,
 			}
 
-			// Call the Contributor-specific handler
 			handlerWithContributor(w, r, contributor)
-		} else {
-			// Fetch user
+
+		case "user":
 			userRow, err := db.GetUserById(r.Context(), userID)
 			if err != nil {
 				respondWithError(w, http.StatusUnauthorized, "User not found")
@@ -84,11 +98,14 @@ func MiddlewareAuth(
 
 			// Call the User-specific handler
 			handlerWithUser(w, r, user)
+
+		default:
+			respondWithError(w, http.StatusBadRequest, "Invalid authentication type")
 		}
 	}
 }
 
-// Helper functions remain unchanged
+// respondWithError sends a JSON error response
 func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -96,6 +113,7 @@ func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
+// extractTokenCookie retrieves the access token from the request cookie
 func extractTokenCookie(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("access_token")
 	if err != nil {
@@ -110,6 +128,7 @@ func extractTokenCookie(r *http.Request) (string, error) {
 	return cookie.Value, nil
 }
 
+// parseJWTToken validates and parses the JWT token
 func parseJWTToken(tokenString string) (jwt.MapClaims, error) {
 	err := godotenv.Load()
 	if err != nil {
@@ -132,6 +151,7 @@ func parseJWTToken(tokenString string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
+// getUserIDFromClaims extracts the user ID from JWT claims
 func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
@@ -144,6 +164,7 @@ func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 	return userID, nil
 }
 
+// isTokenExpired checks if the JWT token has expired
 func isTokenExpired(claims jwt.MapClaims) bool {
 	expTime, ok := claims["exp"].(float64)
 	if !ok {

@@ -32,6 +32,17 @@ type Following struct {
 	FollowingID uuid.UUID
 }
 
+type Moderator struct {
+	ModeratorID uuid.UUID
+	Name        string
+	Email       string
+	Password    string
+	Role        string
+	CreatedBy   uuid.NullUUID
+	CreatedAt   sql.NullTime
+	UpdatedAt   sql.NullTime
+}
+
 type Post struct {
 	PostID    uuid.UUID
 	Title     string

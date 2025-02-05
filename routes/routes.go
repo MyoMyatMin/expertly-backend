@@ -38,104 +38,107 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Post("/logout", handlers.LogoutHandler)
 	r.Post("/refresh_token", handlers.RefreshTokenHandler(queries).ServeHTTP)
 
-	// Authenticated Routes (User-specific)
+	// User-specific Routes
 	r.Get("/auth/me", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.CheckAuthStatsHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
-	r.Get("/test_middlewares", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.TestMiddlewaresHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
-
-	// Post Routes (User-specific)
 	r.Get("/posts", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetAllPostsHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Put("/posts/{id}", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.UpdatePostHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Get("/posts/{id}", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetPostByIDHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Post("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.InsertUpvoteHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Delete("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.DeleteUpvoteHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Post("/posts/{postID}/comments", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.CreateCommentHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Delete("/posts/{postID}/comments/{commentID}", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.DeleteCommentHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Patch("/posts/{postID}/comments/{commentID}", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.UpdateCommentHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Get("/posts/{postID}/comments", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetAllCommentsByPostHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
-	// Following Routes (User-specific)
 	r.Get("/following", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetFollowingListHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Get("/followers", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetFollowerListHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Post("/follow", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.CreateFollowHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Delete("/follow/{id}", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.DeleteFollowHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Get("/feed", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetFeedHandler(queries, user).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Get("/users/{userID}/following", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetFollowingListByIDHandler(queries).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
 	r.Get("/users/{userID}/followers", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetFollowerListByIDHandler(queries).ServeHTTP(w, r)
-		}, nil, false))
+		}, nil, nil, "user"))
 
-	// Post Routes (Contributor-specific)
-	r.Post("/posts", middlewares.MiddlewareAuth(queries, nil,
+	// Contributor Routes
+	r.Post("/posts", middlewares.MiddlewareAuth(queries,
+		nil,
 		func(w http.ResponseWriter, r *http.Request, contributor database.Contributor) {
 			handlers.CreatePostHandler(queries, contributor).ServeHTTP(w, r)
-		}, true))
+		}, nil, "contributor"))
+
+	// Moderator Routes
+	r.Post("/admin/create", middlewares.MiddlewareAuth(queries,
+		nil, nil,
+		func(w http.ResponseWriter, r *http.Request, moderator database.Moderator) {
+			handlers.CreateModeratorHandler(queries, moderator).ServeHTTP(w, r)
+		}, "moderator"))
+
+	r.Post("/admin/login", handlers.LoginModeratorController(queries).ServeHTTP)
 
 	return r
 }
