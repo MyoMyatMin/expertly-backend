@@ -38,6 +38,18 @@ type Contributor struct {
 	CreatedAt       sql.NullTime
 }
 
+type ContributorApplication struct {
+	ContriAppID       uuid.UUID
+	UserID            uuid.UUID
+	ExpertiseProofs   []string
+	IdentityProof     string
+	InitialSubmission string
+	ReviewedBy        uuid.NullUUID
+	Status            sql.NullString
+	CreatedAt         sql.NullTime
+	ReviewedAt        sql.NullTime
+}
+
 type Following struct {
 	FollowerID  uuid.UUID
 	FollowingID uuid.UUID

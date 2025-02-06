@@ -164,5 +164,22 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Put("/appeals/{appealID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.UpdateAppealStatus(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
+
+	//Contributor Application Routes
+	r.Post("/contributor_applications", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.CreateContributorApplication(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
+	r.Get("/contributor_applications", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetContributorApplications(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Put("/contributor_applications/{id}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.UpdateContributorApplication(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Get("/contributor_applications/{id}", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetContributorApplicationByID(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
 	return r
 }
