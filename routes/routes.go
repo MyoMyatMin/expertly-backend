@@ -151,5 +151,18 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Put("/reports/{reportID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.UpdateReportStatusHandler(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
+
+	// Appeal Routes
+	r.Post("/appeals", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.CreateAppealHandler(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
+	r.Get("/appeals", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetAppealsHandler(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Put("/appeals/{appealID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.UpdateAppealStatus(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
 	return r
 }

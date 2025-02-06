@@ -28,7 +28,7 @@ func CreateReportHandler(db *database.Queries, user database.User) http.Handler 
 		}
 
 		var targetUserID uuid.UUID
-
+		var targetPostID uuid.NullUUID
 		if params.TargetPostID.Valid {
 			post, err := db.GetPost(r.Context(), params.TargetPostID.UUID)
 			if err != nil {
@@ -36,13 +36,17 @@ func CreateReportHandler(db *database.Queries, user database.User) http.Handler 
 				return
 			}
 			targetUserID = post.UserID // Author of the post
+			targetPostID = params.TargetPostID
 		} else if params.TargetCommentID.Valid {
 			comment, err := db.GetCommentByID(r.Context(), params.TargetCommentID.UUID)
 			if err != nil {
 				http.Error(w, "Comment not found", http.StatusNotFound)
 				return
 			}
+
 			targetUserID = comment.UserID
+			targetPostID = uuid.NullUUID{UUID: comment.PostID, Valid: true}
+
 		} else {
 			http.Error(w, "Invalid report target", http.StatusBadRequest)
 			return
@@ -51,7 +55,7 @@ func CreateReportHandler(db *database.Queries, user database.User) http.Handler 
 		_, err = db.CreateReport(r.Context(), database.CreateReportParams{
 			ReportID:        uuid.New(),
 			ReportedBy:      user.UserID,
-			TargetPostID:    params.TargetPostID,
+			TargetPostID:    targetPostID,
 			TargetCommentID: params.TargetCommentID,
 			TargetUserID:    targetUserID,
 			Reason:          params.Reason,
@@ -79,11 +83,6 @@ func GetReportsHandler(db *database.Queries, moderator database.Moderator) http.
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(reports)
 	})
-}
-
-var validStatuses = map[string]bool{
-	"resolved": true,
-	"rejected": true,
 }
 
 func UpdateReportStatusHandler(db *database.Queries, moderator database.Moderator) http.Handler {

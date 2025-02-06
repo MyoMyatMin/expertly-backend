@@ -11,6 +11,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type Appeal struct {
+	AppealID       uuid.UUID
+	AppealedBy     uuid.UUID
+	TargetReportID uuid.UUID
+	Reason         string
+	Status         sql.NullString
+	ReviewedAt     sql.NullTime
+	Reviewedby     uuid.NullUUID
+	CreatedAt      sql.NullTime
+}
+
 type Comment struct {
 	CommentID       uuid.UUID
 	PostID          uuid.UUID
