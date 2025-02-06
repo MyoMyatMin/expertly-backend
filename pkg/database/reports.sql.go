@@ -20,7 +20,7 @@ type CreateReportParams struct {
 	ReportID        uuid.UUID
 	ReportedBy      uuid.UUID
 	TargetPostID    uuid.NullUUID
-	TargetUserID    uuid.NullUUID
+	TargetUserID    uuid.UUID
 	TargetCommentID uuid.NullUUID
 	Reason          string
 }
@@ -74,9 +74,9 @@ SELECT
     c.content as target_comment
 
 FROM reports r
-LEFT JOIN users u ON r.reported_by = u.id
+LEFT JOIN users u ON r.reported_by = u.user_id
 LEFT JOIN posts p ON r.target_post_id = p.post_id
-LEFT JOIN comments c ON r.target_comment_id = c.id
+LEFT JOIN comments c ON r.target_comment_id = c.comment_id  
 ORDER BY r.created_at DESC
 `
 
@@ -84,7 +84,7 @@ type ListAllReportDetailsRow struct {
 	ReportID           uuid.UUID
 	ReportedBy         uuid.UUID
 	TargetPostID       uuid.NullUUID
-	TargetUserID       uuid.NullUUID
+	TargetUserID       uuid.UUID
 	TargetCommentID    uuid.NullUUID
 	Reason             string
 	Status             sql.NullString
@@ -142,23 +142,17 @@ func (q *Queries) ListAllReportDetails(ctx context.Context) ([]ListAllReportDeta
 }
 
 const updateReportStatus = `-- name: UpdateReportStatus :one
-UPDATE reports SET status = $1, reviewed_at = $2, reviewedby = $3, updated_at = CURRENT_TIMESTAMP WHERE report_id = $4 RETURNING report_id, reported_by, target_post_id, target_user_id, target_comment_id, reason, status, reviewed_at, reviewedby, created_at
+UPDATE reports SET status = $1, reviewedby = $2, reviewed_at = CURRENT_TIMESTAMP WHERE report_id = $3 RETURNING report_id, reported_by, target_post_id, target_user_id, target_comment_id, reason, status, reviewed_at, reviewedby, created_at
 `
 
 type UpdateReportStatusParams struct {
 	Status     sql.NullString
-	ReviewedAt sql.NullTime
 	Reviewedby uuid.NullUUID
 	ReportID   uuid.UUID
 }
 
 func (q *Queries) UpdateReportStatus(ctx context.Context, arg UpdateReportStatusParams) (Report, error) {
-	row := q.db.QueryRowContext(ctx, updateReportStatus,
-		arg.Status,
-		arg.ReviewedAt,
-		arg.Reviewedby,
-		arg.ReportID,
-	)
+	row := q.db.QueryRowContext(ctx, updateReportStatus, arg.Status, arg.Reviewedby, arg.ReportID)
 	var i Report
 	err := row.Scan(
 		&i.ReportID,

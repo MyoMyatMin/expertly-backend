@@ -2,7 +2,7 @@
 INSERT INTO reports (report_id, reported_by, target_post_id, target_user_id, target_comment_id, reason) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
 
 -- name: UpdateReportStatus :one
-UPDATE reports SET status = $1, reviewed_at = $2, reviewedby = $3, updated_at = CURRENT_TIMESTAMP WHERE report_id = $4 RETURNING *;
+UPDATE reports SET status = $1, reviewedby = $2, reviewed_at = CURRENT_TIMESTAMP WHERE report_id = $3 RETURNING *;
 
 -- name: ListAllReportDetails :many
 SELECT 
@@ -28,8 +28,8 @@ SELECT
     c.content as target_comment
 
 FROM reports r
-LEFT JOIN users u ON r.reported_by = u.id
+LEFT JOIN users u ON r.reported_by = u.user_id
 LEFT JOIN posts p ON r.target_post_id = p.post_id
-LEFT JOIN comments c ON r.target_comment_id = c.id
+LEFT JOIN comments c ON r.target_comment_id = c.comment_id  
 ORDER BY r.created_at DESC;
 

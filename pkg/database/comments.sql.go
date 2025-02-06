@@ -67,6 +67,34 @@ func (q *Queries) DeleteComment(ctx context.Context, commentID uuid.UUID) error 
 	return err
 }
 
+const getCommentByID = `-- name: GetCommentByID :one
+SELECT 
+    comment_id, 
+    post_id, 
+    user_id, 
+    parent_comment_id, 
+    content, 
+    created_at, 
+    updated_at
+FROM comments
+WHERE comment_id = $1
+`
+
+func (q *Queries) GetCommentByID(ctx context.Context, commentID uuid.UUID) (Comment, error) {
+	row := q.db.QueryRowContext(ctx, getCommentByID, commentID)
+	var i Comment
+	err := row.Scan(
+		&i.CommentID,
+		&i.PostID,
+		&i.UserID,
+		&i.ParentCommentID,
+		&i.Content,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCommentsByPost = `-- name: GetCommentsByPost :many
 SELECT 
     comment_id, 

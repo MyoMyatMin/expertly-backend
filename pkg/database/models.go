@@ -57,7 +57,7 @@ type Report struct {
 	ReportID        uuid.UUID
 	ReportedBy      uuid.UUID
 	TargetPostID    uuid.NullUUID
-	TargetUserID    uuid.NullUUID
+	TargetUserID    uuid.UUID
 	TargetCommentID uuid.NullUUID
 	Reason          string
 	Status          sql.NullString

@@ -38,3 +38,16 @@ RETURNING comment_id, post_id, user_id, parent_comment_id, content, created_at, 
 -- name: DeleteComment :exec
 DELETE FROM comments
 WHERE comment_id = $1;
+
+-- name: GetCommentByID :one
+SELECT 
+    comment_id, 
+    post_id, 
+    user_id, 
+    parent_comment_id, 
+    content, 
+    created_at, 
+    updated_at
+FROM comments
+WHERE comment_id = $1;
+

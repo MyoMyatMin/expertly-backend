@@ -140,5 +140,16 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 
 	r.Post("/admin/login", handlers.LoginModeratorController(queries).ServeHTTP)
 
+	r.Post("/reports", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.CreateReportHandler(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
+	r.Get("/reports", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetReportsHandler(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Put("/reports/{reportID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.UpdateReportStatusHandler(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
 	return r
 }
