@@ -38,11 +38,13 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Post("/logout", handlers.LogoutHandler)
 	r.Post("/refresh_token", handlers.RefreshTokenHandler(queries).ServeHTTP)
 
-	// User-specific Routes
-	r.Get("/auth/me", middlewares.MiddlewareAuth(queries,
+	r.Get("/auth/me", middlewares.MiddlewareModeratorOrUser(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.CheckAuthStatsHandler(queries, user).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+			handlers.CheckAuthStatsHandler(queries, user, database.Moderator{}).ServeHTTP(w, r)
+		},
+		func(w http.ResponseWriter, r *http.Request, moderator database.Moderator) {
+			handlers.CheckAuthStatsHandler(queries, database.User{}, moderator).ServeHTTP(w, r)
+		}))
 
 	r.Get("/posts", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {

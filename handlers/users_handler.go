@@ -287,28 +287,39 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 
 }
-func CheckAuthStatsHandler(db *database.Queries, user database.User) http.HandlerFunc {
+func CheckAuthStatsHandler(db *database.Queries, user database.User, moderator database.Moderator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		isContributor, err := db.CheckIfUserIsContributor(r.Context(), user.UserID)
-
-		if err != nil {
-			http.Error(w, "Couldn't check if user is contributor", http.StatusInternalServerError)
-			return
-		}
 
 		var returnedUser ReturnedUser
 
-		returnedUser = ReturnedUser{
-			UserID:   user.UserID,
-			Name:     user.Name,
-			Email:    user.Email,
-			Username: user.Username,
-			Role:     "user",
-		}
+		if user.UserID != uuid.Nil {
+			isContributor, err := db.CheckIfUserIsContributor(r.Context(), user.UserID)
+			if err != nil {
+				http.Error(w, "Couldn't check if user is contributor", http.StatusInternalServerError)
+				return
+			}
 
-		if isContributor {
-			returnedUser.Role = "contributor"
+			returnedUser = ReturnedUser{
+				UserID:   user.UserID,
+				Name:     user.Name,
+				Email:    user.Email,
+				Username: user.Username,
+				Role:     "user",
+			}
+
+			if isContributor {
+				returnedUser.Role = "contributor"
+			}
+		} else if moderator.ModeratorID != uuid.Nil {
+			returnedUser = ReturnedUser{
+				UserID: moderator.ModeratorID, // Assuming moderator has UserID
+				Name:   moderator.Name,        // Assuming moderator has Name
+				Email:  moderator.Email,       // Add logic if needed
+				Role:   moderator.Role,        // Assuming moderator has Role
+			}
+		} else {
+			http.Error(w, "No valid user or moderator provided", http.StatusBadRequest)
+			return
 		}
 
 		response := map[string]interface{}{

@@ -10,6 +10,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type returnedModerator struct {
+	ModeratorID uuid.UUID `json:"moderator_id"`
+	Name        string    `json:"name"`
+	Email       string    `json:"email"`
+	Role        string    `json:"role"`
+}
+
 func CreateModeratorHandler(db *database.Queries, moderator database.Moderator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
@@ -107,8 +114,15 @@ func LoginModeratorController(db *database.Queries) http.Handler {
 			Path:     "/",
 		})
 
+		var returnedModerator = returnedModerator{
+			ModeratorID: moderator.ModeratorID,
+			Name:        moderator.Name,
+			Email:       moderator.Email,
+			Role:        moderator.Role,
+		}
+
 		response := map[string]interface{}{
-			"user":          moderator,
+			"user":          returnedModerator,
 			"access_token":  accessToken,
 			"refresh_token": refreshToken,
 		}
