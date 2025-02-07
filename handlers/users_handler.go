@@ -21,6 +21,15 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
+type ReturnedUser struct {
+	UserID         uuid.UUID `json:"user_id"`
+	Name           string    `json:"name"`
+	Email          string    `json:"email"`
+	Username       string    `json:"username"`
+	SuspendedUntil time.Time `json:"suspended_until"`
+	Role           string    `json:"role"`
+}
+
 func generateAccessToken(userID uuid.UUID) (string, error) {
 	godotenv.Load(".env")
 	var jwtSecretKey = os.Getenv("SECRET_KEY")
@@ -170,6 +179,28 @@ func LoginHandler(db *database.Queries) http.Handler {
 			return
 		}
 
+		var returnedUser ReturnedUser
+
+		isContributor, err := db.CheckIfUserIsContributor(r.Context(), user.UserID)
+
+		if err != nil {
+			http.Error(w, "Couldn't check if user is contributor", http.StatusInternalServerError)
+			return
+		}
+
+		returnedUser = ReturnedUser{
+			UserID:         user.UserID,
+			Name:           user.Name,
+			Email:          user.Email,
+			Username:       user.Username,
+			SuspendedUntil: user.SuspendedUntil.Time,
+			Role:           "user",
+		}
+
+		if isContributor {
+			returnedUser.Role = "contributor"
+		}
+
 		http.SetCookie(w, &http.Cookie{
 			Name:     "access_token",
 			Value:    accessToken,
@@ -189,7 +220,7 @@ func LoginHandler(db *database.Queries) http.Handler {
 		})
 
 		response := map[string]interface{}{
-			"user":          user,
+			"user":          returnedUser,
 			"access_token":  accessToken,
 			"refresh_token": refreshToken,
 		}
@@ -258,8 +289,30 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 func CheckAuthStatsHandler(db *database.Queries, user database.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		isContributor, err := db.CheckIfUserIsContributor(r.Context(), user.UserID)
+
+		if err != nil {
+			http.Error(w, "Couldn't check if user is contributor", http.StatusInternalServerError)
+			return
+		}
+
+		var returnedUser ReturnedUser
+
+		returnedUser = ReturnedUser{
+			UserID:   user.UserID,
+			Name:     user.Name,
+			Email:    user.Email,
+			Username: user.Username,
+			Role:     "user",
+		}
+
+		if isContributor {
+			returnedUser.Role = "contributor"
+		}
+
 		response := map[string]interface{}{
-			"user": user,
+			"user": returnedUser,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

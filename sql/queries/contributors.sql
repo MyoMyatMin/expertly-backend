@@ -39,3 +39,10 @@ SELECT
     created_at
 FROM Contributors
 WHERE $1 = ANY(expertise_fields);
+
+-- name: CheckIfUserIsContributor :one
+SELECT EXISTS (
+    SELECT 1
+    FROM Contributors
+    WHERE user_id = $1
+);

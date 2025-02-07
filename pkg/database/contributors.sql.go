@@ -12,6 +12,21 @@ import (
 	"github.com/lib/pq"
 )
 
+const checkIfUserIsContributor = `-- name: CheckIfUserIsContributor :one
+SELECT EXISTS (
+    SELECT 1
+    FROM Contributors
+    WHERE user_id = $1
+)
+`
+
+func (q *Queries) CheckIfUserIsContributor(ctx context.Context, userID uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, checkIfUserIsContributor, userID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createContributor = `-- name: CreateContributor :one
 INSERT INTO Contributors (
     user_id,
