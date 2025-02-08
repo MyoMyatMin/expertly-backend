@@ -91,15 +91,15 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.GetAllCommentsByPostHandler(queries, user).ServeHTTP(w, r)
 		}, nil, nil, "user"))
 
-	r.Get("/following", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.GetFollowingListHandler(queries, user).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+	// r.Get("/following", middlewares.MiddlewareAuth(queries,
+	// 	func(w http.ResponseWriter, r *http.Request, user database.User) {
+	// 		handlers.GetFollowingListHandler(queries, user).ServeHTTP(w, r)
+	// 	}, nil, nil, "user"))
 
-	r.Get("/followers", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.GetFollowerListHandler(queries, user).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+	// r.Get("/followers", middlewares.MiddlewareAuth(queries,
+	// 	func(w http.ResponseWriter, r *http.Request, user database.User) {
+	// 		handlers.GetFollowerListHandler(queries, user).ServeHTTP(w, r)
+	// 	}, nil, nil, "user"))
 
 	r.Post("/follow", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
@@ -116,12 +116,12 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.GetFeedHandler(queries, user).ServeHTTP(w, r)
 		}, nil, nil, "user"))
 
-	r.Get("/users/{userID}/following", middlewares.MiddlewareAuth(queries,
+	r.Get("/users/{username}/following", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetFollowingListByIDHandler(queries).ServeHTTP(w, r)
 		}, nil, nil, "user"))
 
-	r.Get("/users/{userID}/followers", middlewares.MiddlewareAuth(queries,
+	r.Get("/users/{username}/followers", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetFollowerListByIDHandler(queries).ServeHTTP(w, r)
 		}, nil, nil, "user"))
@@ -191,6 +191,15 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 
 	r.Delete("/saved_posts/{id}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
 		handlers.DeleteSavedPost(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
+	// r.Get("/saved_posts/{username}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+	// 	handlers.GetSavedPosts(queries, u).ServeHTTP(w, r)
+	// }, nil, nil, "user"))
+
+	// Profile Routes
+	r.Get("/profile/{username}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetProfileDataHandler(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
 	return r

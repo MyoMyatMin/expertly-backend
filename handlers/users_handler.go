@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/MyoMyatMin/expertly-backend/utils"
+	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -27,6 +29,17 @@ type ReturnedUser struct {
 	Username       string    `json:"username"`
 	SuspendedUntil time.Time `json:"suspended_until"`
 	Role           string    `json:"role"`
+}
+
+type ReturnedProfileUser struct {
+	UserID         uuid.UUID `json:"user_id"`
+	Name           string    `json:"name"`
+	Email          string    `json:"email"`
+	Username       string    `json:"username"`
+	SuspendedUntil time.Time `json:"suspended_until"`
+	Role           string    `json:"role"`
+	Followers      int       `json:"followers"`
+	Following      int       `json:"following"`
 }
 
 func generateAccessToken(userID uuid.UUID) (string, error) {
@@ -229,39 +242,6 @@ func LoginHandler(db *database.Queries) http.Handler {
 	})
 }
 
-// func CheckAuthStatsHander(db *database.Queries, user database.User) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		accessToken, err := r.Cookie("access_token")
-// 		if err != nil {
-// 			http.Error(w, "No access token", http.StatusUnauthorized)
-// 			return
-// 		}
-
-// 		claims := &JWTClaims{}
-// 		_, err = jwt.ParseWithClaims(accessToken.Value, claims, func(token *jwt.Token) (interface{}, error) {
-// 			return []byte(os.Getenv("SECRET_KEY")), nil
-// 		})
-
-// 		if err != nil {
-// 			http.Error(w, "Invalid access token", http.StatusUnauthorized)
-// 			return
-// 		}
-
-// 		user, err := db.GetUserById(r.Context(), claims.UserID)
-// 		if err != nil {
-// 			http.Error(w, "User not found", http.StatusNotFound)
-// 			return
-// 		}
-
-// 		response := map[string]interface{}{
-// 			"user": user,
-// 		}
-
-// 		w.Header().Set("Content-Type", "application/json")
-// 		json.NewEncoder(w).Encode(response)
-// 	})
-// }
-
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
@@ -330,49 +310,77 @@ func CheckAuthStatsHandler(db *database.Queries, user database.User, moderator d
 	}
 }
 
-// func GetProfileDataHandler(db *database.Queries, user database.User) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
+func GetProfileDataHandler(db *database.Queries, user database.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-// 		username := chi.URLParam(r, "username")
+		username := chi.URLParam(r, "username")
 
-// 		aimedUser, err := db.GetUserByUsername(r.Context(), username)
+		aimedUser, err := db.GetUserByUsername(r.Context(), username)
 
-// 		if err != nil {
-// 			http.Error(w, "User not found", http.StatusNotFound)
-// 			return
-// 		}
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
 
-// 		isContributor, err := db.CheckIfUserIsContributor(r.Context(), aimedUser.UserID)
+		isContributor, err := db.CheckIfUserIsContributor(r.Context(), aimedUser.UserID)
 
-// 		if err != nil {
-// 			http.Error(w, "Couldn't check if user is contributor", http.StatusInternalServerError)
-// 			return
-// 		}
+		if err != nil {
+			http.Error(w, "Couldn't check if user is contributor", http.StatusInternalServerError)
+			return
+		}
 
-// 		if isContributor {
-// 			posts,err := db.GetPostsByContributor(r.Context(), aimedUser.UserID)
-// 			if err != nil {
-// 				http.Error(w, "Couldn't get posts", http.StatusInternalServerError)
-// 				return
-// 			}
+		follower_count, err := db.GetFollwersCount(r.Context(), aimedUser.UserID)
+		if err != nil {
+			http.Error(w, "Couldn't get follower count", http.StatusInternalServerError)
+			return
 
-// 		}else{
-// 			posts := []database.GetPostsByContributorRow{}
-// 		}
+		}
 
-// 		w.Header().Set("Content-Type", "application/json")
-// 		json.NewEncoder(w).Encode(response)
-// 	}
-// }
+		following_count, err := db.GetFollowingCount(r.Context(), aimedUser.UserID)
+		if err != nil {
+			http.Error(w, "Couldn't get following count", http.StatusInternalServerError)
+			return
 
-// // Modify TestMiddlewaresHandler to accept a user parameter
-// func TestMiddlewaresHandler(db *database.Queries, user database.User) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		response := map[string]interface{}{
-// 			"user": user,
-// 		}
-// 		fmt.Println("User: ", user)
-// 		w.Header().Set("Content-Type", "application/json")
-// 		json.NewEncoder(w).Encode(response)
-// 	}
-// }
+		}
+		returnedUser := ReturnedProfileUser{
+			UserID:         aimedUser.UserID,
+			Name:           aimedUser.Name,
+			Email:          aimedUser.Email,
+			Username:       aimedUser.Username,
+			SuspendedUntil: aimedUser.SuspendedUntil.Time,
+			Role:           "user",
+			Followers:      int(follower_count),
+			Following:      int(following_count),
+		}
+
+		if isContributor {
+			returnedUser.Role = "contributor"
+		}
+
+		// followingList, err := db.GetFollowingList(r.Context(), aimedUser.UserID)
+		// if err != nil {
+		// 	http.Error(w, "Couldn't get following list", http.StatusInternalServerError)
+		// 	return
+
+		// }
+
+		response := map[string]interface{}{
+			"user": returnedUser,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+// Modify TestMiddlewaresHandler to accept a user parameter
+func TestMiddlewaresHandler(db *database.Queries, user database.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		response := map[string]interface{}{
+			"user": user,
+		}
+		fmt.Println("User: ", user)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}

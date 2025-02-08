@@ -55,3 +55,6 @@ SELECT
     updated_at 
 FROM users 
 WHERE username = $1;
+
+-- name: GetIDbyUsername :one
+SELECT user_id FROM users WHERE username = $1;

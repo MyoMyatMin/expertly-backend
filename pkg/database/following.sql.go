@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -43,22 +44,35 @@ func (q *Queries) DeleteFollow(ctx context.Context, arg DeleteFollowParams) erro
 }
 
 const getFeed = `-- name: GetFeed :many
-SELECT posts.post_id, posts.title, posts.content, posts.slug, posts.user_id, posts.created_at, posts.updated_at
+SELECT posts.post_id, posts.title, posts.content, posts.slug, posts.user_id, posts.created_at, posts.updated_at, users.name, users.username
 FROM posts
 JOIN following ON posts.user_id = following.following_id
+JOIN users ON posts.user_id = users.user_id
 WHERE following.follower_id = $1
 ORDER BY posts.created_at DESC
 `
 
-func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]Post, error) {
+type GetFeedRow struct {
+	PostID    uuid.UUID
+	Title     string
+	Content   string
+	Slug      string
+	UserID    uuid.UUID
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+	Name      string
+	Username  string
+}
+
+func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]GetFeedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getFeed, followerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Post
+	var items []GetFeedRow
 	for rows.Next() {
-		var i Post
+		var i GetFeedRow
 		if err := rows.Scan(
 			&i.PostID,
 			&i.Title,
@@ -67,6 +81,8 @@ func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]Post, er
 			&i.UserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Name,
+			&i.Username,
 		); err != nil {
 			return nil, err
 		}
@@ -83,24 +99,33 @@ func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]Post, er
 
 const getFollowerList = `-- name: GetFollowerList :many
 SELECT 
-    follower_id
+    following.follower_id,
+    users.name,
+    users.username
 FROM following
-WHERE following_id = $1
+JOIN users ON following.follower_id = users.user_id
+WHERE following.following_id = $1
 `
 
-func (q *Queries) GetFollowerList(ctx context.Context, followingID uuid.UUID) ([]uuid.UUID, error) {
+type GetFollowerListRow struct {
+	FollowerID uuid.UUID
+	Name       string
+	Username   string
+}
+
+func (q *Queries) GetFollowerList(ctx context.Context, followingID uuid.UUID) ([]GetFollowerListRow, error) {
 	rows, err := q.db.QueryContext(ctx, getFollowerList, followingID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []GetFollowerListRow
 	for rows.Next() {
-		var follower_id uuid.UUID
-		if err := rows.Scan(&follower_id); err != nil {
+		var i GetFollowerListRow
+		if err := rows.Scan(&i.FollowerID, &i.Name, &i.Username); err != nil {
 			return nil, err
 		}
-		items = append(items, follower_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -111,26 +136,48 @@ func (q *Queries) GetFollowerList(ctx context.Context, followingID uuid.UUID) ([
 	return items, nil
 }
 
-const getFollowingList = `-- name: GetFollowingList :many
-SELECT 
-    following_id
+const getFollowingCount = `-- name: GetFollowingCount :one
+SELECT COUNT(following_id)
 FROM following
 WHERE follower_id = $1
 `
 
-func (q *Queries) GetFollowingList(ctx context.Context, followerID uuid.UUID) ([]uuid.UUID, error) {
+func (q *Queries) GetFollowingCount(ctx context.Context, followerID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFollowingCount, followerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getFollowingList = `-- name: GetFollowingList :many
+SELECT 
+    following.following_id,
+    users.name,
+    users.username
+FROM following
+JOIN users ON following.following_id = users.user_id
+WHERE following.follower_id = $1
+`
+
+type GetFollowingListRow struct {
+	FollowingID uuid.UUID
+	Name        string
+	Username    string
+}
+
+func (q *Queries) GetFollowingList(ctx context.Context, followerID uuid.UUID) ([]GetFollowingListRow, error) {
 	rows, err := q.db.QueryContext(ctx, getFollowingList, followerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []GetFollowingListRow
 	for rows.Next() {
-		var following_id uuid.UUID
-		if err := rows.Scan(&following_id); err != nil {
+		var i GetFollowingListRow
+		if err := rows.Scan(&i.FollowingID, &i.Name, &i.Username); err != nil {
 			return nil, err
 		}
-		items = append(items, following_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -139,4 +186,17 @@ func (q *Queries) GetFollowingList(ctx context.Context, followerID uuid.UUID) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const getFollwersCount = `-- name: GetFollwersCount :one
+SELECT COUNT(follower_id)
+FROM following
+WHERE following_id = $1
+`
+
+func (q *Queries) GetFollwersCount(ctx context.Context, followingID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFollwersCount, followingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

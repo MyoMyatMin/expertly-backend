@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
@@ -9,44 +10,47 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetFollowingListHandler(db *database.Queries, user database.User) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		following, err := db.GetFollowingList(r.Context(), user.UserID)
-		if err != nil {
-			http.Error(w, "Couldn't get following list", http.StatusInternalServerError)
-			return
-		}
+// func GetFollowingListHandler(db *database.Queries, user database.User) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		following, err := db.GetFollowingList(r.Context(), user.UserID)
+// 		if err != nil {
+// 			http.Error(w, "Couldn't get following list", http.StatusInternalServerError)
+// 			return
+// 		}
 
-		w.WriteHeader(http.StatusOK) // 200
-		json.NewEncoder(w).Encode(following)
-	})
-}
+// 		w.WriteHeader(http.StatusOK) // 200
+// 		json.NewEncoder(w).Encode(following)
+// 	})
+// }
 
-func GetFollowerListHandler(db *database.Queries, user database.User) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		followers, err := db.GetFollowerList(r.Context(), user.UserID)
-		if err != nil {
-			http.Error(w, "Couldn't get follower list", http.StatusInternalServerError)
-			return
-		}
+// func GetFollowerListHandler(db *database.Queries, user database.User) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		followers, err := db.GetFollowerList(r.Context(), user.UserID)
+// 		if err != nil {
+// 			http.Error(w, "Couldn't get follower list", http.StatusInternalServerError)
+// 			return
+// 		}
 
-		w.WriteHeader(http.StatusOK) // 200
-		json.NewEncoder(w).Encode(followers)
-	})
-}
+// 		w.WriteHeader(http.StatusOK) // 200
+// 		json.NewEncoder(w).Encode(followers)
+// 	})
+// }
 
 func GetFollowingListByIDHandler(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract userID from URL
-		userIDParam := chi.URLParam(r, "userID")
-		userID, err := uuid.Parse(userIDParam)
+
+		usernameParam := chi.URLParam(r, "username")
+		username := usernameParam
+
+		userID, err := db.GetIDbyUsername(r.Context(), username)
 		if err != nil {
-			http.Error(w, "Invalid user ID", http.StatusBadRequest)
+			http.Error(w, "Couldn't get user ID", http.StatusInternalServerError)
 			return
 		}
-		// Get following list for the user
+
 		following, err := db.GetFollowingList(r.Context(), userID)
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Couldn't get following list", http.StatusInternalServerError)
 			return
 		}
