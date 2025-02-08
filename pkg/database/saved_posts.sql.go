@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -39,4 +40,76 @@ type DeleteSavedPostParams struct {
 func (q *Queries) DeleteSavedPost(ctx context.Context, arg DeleteSavedPostParams) error {
 	_, err := q.db.ExecContext(ctx, deleteSavedPost, arg.UserID, arg.PostID)
 	return err
+}
+
+const listSavedPostsByID = `-- name: ListSavedPostsByID :many
+SELECT 
+    p.post_id as post_id,
+    p.user_id as user_id,
+    p.slug as slug,
+    p.title as title,
+    p.content as content,
+    p.created_at as created_at,
+    p.updated_at as updated_at,
+    COALESCE(u.upvote_count, 0) as upvote_count,
+    COALESCE(c.comment_count, 0) as comment_count
+FROM posts p
+JOIN saved_posts s ON p.post_id = s.post_id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) as upvote_count
+    FROM upvotes
+    GROUP BY post_id
+) u ON p.post_id = u.post_id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) as comment_count
+    FROM comments
+    GROUP BY post_id
+) c ON p.post_id = c.post_id
+WHERE s.user_id = $1
+ORDER BY p.created_at DESC
+`
+
+type ListSavedPostsByIDRow struct {
+	PostID       uuid.UUID
+	UserID       uuid.UUID
+	Slug         string
+	Title        string
+	Content      string
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+	UpvoteCount  int64
+	CommentCount int64
+}
+
+func (q *Queries) ListSavedPostsByID(ctx context.Context, userID uuid.UUID) ([]ListSavedPostsByIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSavedPostsByID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSavedPostsByIDRow
+	for rows.Next() {
+		var i ListSavedPostsByIDRow
+		if err := rows.Scan(
+			&i.PostID,
+			&i.UserID,
+			&i.Slug,
+			&i.Title,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UpvoteCount,
+			&i.CommentCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

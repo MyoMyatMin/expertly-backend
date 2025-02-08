@@ -63,3 +63,26 @@ func DeleteSavedPost(db *database.Queries, user database.User) http.Handler {
 		w.WriteHeader(http.StatusOK) // 200
 	})
 }
+
+func GetSavedPosts(db *database.Queries, user database.User) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username := chi.URLParam(r, "username")
+
+		userID, err := db.GetIDbyUsername(r.Context(), username)
+		if err != nil {
+			http.Error(w, "Couldn't get user ID", http.StatusInternalServerError)
+			return
+		}
+
+		savedPosts, err := db.ListSavedPostsByID(r.Context(), userID)
+		if err != nil {
+			http.Error(w, "Couldn't get saved posts", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK) // 200
+		json.NewEncoder(w).Encode(savedPosts)
+
+	})
+
+}

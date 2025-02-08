@@ -193,9 +193,9 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.DeleteSavedPost(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
-	// r.Get("/saved_posts/{username}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
-	// 	handlers.GetSavedPosts(queries, u).ServeHTTP(w, r)
-	// }, nil, nil, "user"))
+	r.Get("/saved_posts/{username}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetSavedPosts(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
 
 	// Profile Routes
 	r.Get("/profile/{username}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
