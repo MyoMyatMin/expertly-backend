@@ -63,3 +63,4 @@ SELECT
     updated_at
 FROM posts
 WHERE slug = $1;
+

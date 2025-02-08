@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -331,14 +330,49 @@ func CheckAuthStatsHandler(db *database.Queries, user database.User, moderator d
 	}
 }
 
-// Modify TestMiddlewaresHandler to accept a user parameter
-func TestMiddlewaresHandler(db *database.Queries, user database.User) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		response := map[string]interface{}{
-			"user": user,
-		}
-		fmt.Println("User: ", user)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	}
-}
+// func GetProfileDataHandler(db *database.Queries, user database.User) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+
+// 		username := chi.URLParam(r, "username")
+
+// 		aimedUser, err := db.GetUserByUsername(r.Context(), username)
+
+// 		if err != nil {
+// 			http.Error(w, "User not found", http.StatusNotFound)
+// 			return
+// 		}
+
+// 		isContributor, err := db.CheckIfUserIsContributor(r.Context(), aimedUser.UserID)
+
+// 		if err != nil {
+// 			http.Error(w, "Couldn't check if user is contributor", http.StatusInternalServerError)
+// 			return
+// 		}
+
+// 		if isContributor {
+// 			posts,err := db.GetPostsByContributor(r.Context(), aimedUser.UserID)
+// 			if err != nil {
+// 				http.Error(w, "Couldn't get posts", http.StatusInternalServerError)
+// 				return
+// 			}
+
+// 		}else{
+// 			posts := []database.GetPostsByContributorRow{}
+// 		}
+
+// 		w.Header().Set("Content-Type", "application/json")
+// 		json.NewEncoder(w).Encode(response)
+// 	}
+// }
+
+// // Modify TestMiddlewaresHandler to accept a user parameter
+// func TestMiddlewaresHandler(db *database.Queries, user database.User) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		response := map[string]interface{}{
+// 			"user": user,
+// 		}
+// 		fmt.Println("User: ", user)
+// 		w.Header().Set("Content-Type", "application/json")
+// 		json.NewEncoder(w).Encode(response)
+// 	}
+// }

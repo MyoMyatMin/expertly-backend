@@ -89,6 +89,12 @@ type Report struct {
 	CreatedAt       sql.NullTime
 }
 
+type SavedPost struct {
+	UserID    uuid.UUID
+	PostID    uuid.UUID
+	CreatedAt sql.NullTime
+}
+
 type Upvote struct {
 	UserID    uuid.UUID
 	PostID    uuid.UUID

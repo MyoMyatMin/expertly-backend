@@ -183,5 +183,15 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	r.Get("/contributor_applications/{id}", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.GetContributorApplicationByID(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
+
+	// Saved Posts Routes
+	r.Post("/saved_posts", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.CreateSavePost(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
+	r.Delete("/saved_posts/{id}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.DeleteSavedPost(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
 	return r
 }

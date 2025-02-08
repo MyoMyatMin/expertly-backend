@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -74,6 +75,70 @@ func (q *Queries) GetContributorByUserId(ctx context.Context, userID uuid.UUID) 
 	var i Contributor
 	err := row.Scan(&i.UserID, pq.Array(&i.ExpertiseFields), &i.CreatedAt)
 	return i, err
+}
+
+const getPostsByContributor = `-- name: GetPostsByContributor :many
+SELECT 
+    p.post_id, 
+    p.user_id, 
+    p.slug, 
+    p.title, 
+    p.content, 
+    p.created_at, 
+    p.updated_at,
+    COALESCE(SUM(u.upvote), 0) AS upvotes,
+    COALESCE(COUNT(c.comment_id), 0) AS comment_count
+FROM posts p
+LEFT JOIN upvotes u ON p.post_id = u.post_id
+LEFT JOIN comments c ON p.post_id = c.post_id
+WHERE p.user_id = $1
+GROUP BY p.post_id
+ORDER BY p.created_at DESC
+`
+
+type GetPostsByContributorRow struct {
+	PostID       uuid.UUID
+	UserID       uuid.UUID
+	Slug         string
+	Title        string
+	Content      string
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+	Upvotes      interface{}
+	CommentCount interface{}
+}
+
+func (q *Queries) GetPostsByContributor(ctx context.Context, userID uuid.UUID) ([]GetPostsByContributorRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsByContributor, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPostsByContributorRow
+	for rows.Next() {
+		var i GetPostsByContributorRow
+		if err := rows.Scan(
+			&i.PostID,
+			&i.UserID,
+			&i.Slug,
+			&i.Title,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Upvotes,
+			&i.CommentCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAllContributors = `-- name: ListAllContributors :many
