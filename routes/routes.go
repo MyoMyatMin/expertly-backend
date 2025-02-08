@@ -202,5 +202,10 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.GetProfileDataHandler(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
+	// Profile Contributor Routes
+	r.Get("/profile/{username}/posts", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetContributorProfilePostsHandler(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
 	return r
 }

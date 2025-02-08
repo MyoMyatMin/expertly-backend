@@ -57,7 +57,7 @@ SELECT
     p.content, 
     p.created_at, 
     p.updated_at,
-    COALESCE(SUM(u.upvote), 0) AS upvotes,
+    COALESCE(COUNT(u.user_id), 0) AS upvotes,
     COALESCE(COUNT(c.comment_id), 0) AS comment_count
 FROM posts p
 LEFT JOIN upvotes u ON p.post_id = u.post_id

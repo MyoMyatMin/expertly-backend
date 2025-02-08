@@ -373,6 +373,28 @@ func GetProfileDataHandler(db *database.Queries, user database.User) http.Handle
 	}
 }
 
+func GetContributorProfilePostsHandler(db *database.Queries, user database.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username := chi.URLParam(r, "username")
+
+		aimedUser, err := db.GetUserByUsername(r.Context(), username)
+
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
+		posts, err := db.GetPostsByContributor(r.Context(), aimedUser.UserID)
+		if err != nil {
+			http.Error(w, "Couldn't get posts by contributor", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(posts)
+	}
+}
+
 // Modify TestMiddlewaresHandler to accept a user parameter
 func TestMiddlewaresHandler(db *database.Queries, user database.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
