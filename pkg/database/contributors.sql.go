@@ -86,7 +86,7 @@ SELECT
     p.content, 
     p.created_at, 
     p.updated_at,
-    COALESCE(COUNT(u.user_id), 0) AS upvotes,
+    COALESCE(COUNT(u.user_id), 0) AS upvote_count,
     COALESCE(COUNT(c.comment_id), 0) AS comment_count
 FROM posts p
 LEFT JOIN upvotes u ON p.post_id = u.post_id
@@ -104,7 +104,7 @@ type GetPostsByContributorRow struct {
 	Content      string
 	CreatedAt    sql.NullTime
 	UpdatedAt    sql.NullTime
-	Upvotes      interface{}
+	UpvoteCount  interface{}
 	CommentCount interface{}
 }
 
@@ -125,7 +125,7 @@ func (q *Queries) GetPostsByContributor(ctx context.Context, userID uuid.UUID) (
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Upvotes,
+			&i.UpvoteCount,
 			&i.CommentCount,
 		); err != nil {
 			return nil, err

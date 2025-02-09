@@ -97,6 +97,26 @@ func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]GetFeedR
 	return items, nil
 }
 
+const getFollowStatus = `-- name: GetFollowStatus :one
+SELECT EXISTS (
+    SELECT 1
+    FROM following
+    WHERE follower_id = $1 AND following_id = $2
+)
+`
+
+type GetFollowStatusParams struct {
+	FollowerID  uuid.UUID
+	FollowingID uuid.UUID
+}
+
+func (q *Queries) GetFollowStatus(ctx context.Context, arg GetFollowStatusParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, getFollowStatus, arg.FollowerID, arg.FollowingID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getFollowerList = `-- name: GetFollowerList :many
 SELECT 
     following.follower_id,

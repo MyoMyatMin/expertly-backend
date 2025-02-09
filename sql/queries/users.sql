@@ -58,3 +58,13 @@ WHERE username = $1;
 
 -- name: GetIDbyUsername :one
 SELECT user_id FROM users WHERE username = $1;
+
+
+-- name: UpdateUser :exec
+UPDATE users
+SET 
+    name = $2, 
+    username = $3
+WHERE user_id = $1
+RETURNING user_id, name, email, username, suspended_until, created_at, updated_at;
+

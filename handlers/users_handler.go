@@ -40,6 +40,7 @@ type ReturnedProfileUser struct {
 	Role           string    `json:"role"`
 	Followers      int       `json:"followers"`
 	Following      int       `json:"following"`
+	IsFollowing    bool      `json:"is_following"`
 }
 
 func generateAccessToken(userID uuid.UUID) (string, error) {
@@ -340,8 +341,18 @@ func GetProfileDataHandler(db *database.Queries, user database.User) http.Handle
 		if err != nil {
 			http.Error(w, "Couldn't get following count", http.StatusInternalServerError)
 			return
-
 		}
+
+		isFollowing, err := db.GetFollowStatus(r.Context(), database.GetFollowStatusParams{
+			FollowerID:  user.UserID,
+			FollowingID: aimedUser.UserID,
+		})
+
+		if err != nil {
+			http.Error(w, "Couldn't get follow status", http.StatusInternalServerError)
+			return
+		}
+
 		returnedUser := ReturnedProfileUser{
 			UserID:         aimedUser.UserID,
 			Name:           aimedUser.Name,
@@ -351,6 +362,10 @@ func GetProfileDataHandler(db *database.Queries, user database.User) http.Handle
 			Role:           "user",
 			Followers:      int(follower_count),
 			Following:      int(following_count),
+			IsFollowing:    false,
+		}
+		if isFollowing {
+			returnedUser.IsFollowing = true
 		}
 
 		if isContributor {
@@ -367,7 +382,7 @@ func GetProfileDataHandler(db *database.Queries, user database.User) http.Handle
 		response := map[string]interface{}{
 			"user": returnedUser,
 		}
-
+		fmt.Println("User: ", returnedUser, isFollowing)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}
@@ -392,6 +407,40 @@ func GetContributorProfilePostsHandler(db *database.Queries, user database.User)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(posts)
+	}
+}
+
+func UpdateUserHandler(db *database.Queries, user database.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		type parameters struct {
+			Name     string `json:"name"`
+			Username string `json:"username"`
+		}
+
+		var params parameters
+
+		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		err := db.UpdateUser(r.Context(), database.UpdateUserParams{
+			UserID:   user.UserID,
+			Name:     params.Name,
+			Username: params.Username,
+		})
+
+		if err != nil {
+			http.Error(w, "Couldn't update user", http.StatusInternalServerError)
+			return
+		}
+
+		response := map[string]interface{}{
+			"message": "User updated",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
 	}
 }
 

@@ -43,3 +43,9 @@ SELECT COUNT(following_id)
 FROM following
 WHERE follower_id = $1;
 
+-- name: GetFollowStatus :one
+SELECT EXISTS (
+    SELECT 1
+    FROM following
+    WHERE follower_id = $1 AND following_id = $2
+);

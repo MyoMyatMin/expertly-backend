@@ -207,5 +207,9 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.GetContributorProfilePostsHandler(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
+	r.Put("/profile/update", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.UpdateUserHandler(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
 	return r
 }

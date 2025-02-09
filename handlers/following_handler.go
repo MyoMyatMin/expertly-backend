@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
@@ -50,7 +49,6 @@ func GetFollowingListByIDHandler(db *database.Queries) http.Handler {
 
 		following, err := db.GetFollowingList(r.Context(), userID)
 		if err != nil {
-			fmt.Println(err)
 			http.Error(w, "Couldn't get following list", http.StatusInternalServerError)
 			return
 		}
@@ -85,7 +83,7 @@ func GetFollowerListByIDHandler(db *database.Queries) http.Handler {
 func CreateFollowHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
-			FollowingID uuid.UUID `json:"followee_id"`
+			FollowingID uuid.UUID `json:"following_id"`
 		}
 
 		var params parameters
