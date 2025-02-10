@@ -16,16 +16,19 @@ RETURNING comment_id, post_id, user_id, parent_comment_id, content, created_at, 
 
 -- name: GetCommentsByPost :many
 SELECT 
-    comment_id, 
-    post_id, 
-    user_id, 
-    parent_comment_id, 
-    content, 
-    created_at, 
-    updated_at
-FROM comments
-WHERE post_id = $1
-ORDER BY created_at ASC;
+    c.comment_id, 
+    c.post_id, 
+    c.user_id, 
+    c.parent_comment_id, 
+    c.content, 
+    c.created_at, 
+    c.updated_at,
+    u.username,
+    u.name
+FROM comments c
+JOIN users u ON c.user_id = u.user_id
+WHERE c.post_id = $1
+ORDER BY c.created_at ASC;
 
 -- name: UpdateComment :one
 UPDATE comments 

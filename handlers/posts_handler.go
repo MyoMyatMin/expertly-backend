@@ -45,16 +45,7 @@ func CreatePostHandler(db *database.Queries, contributor database.Contributor) h
 			return
 		}
 
-		imagesToDelete := findImagesToDelete(params.Content, params.Images)
-		for _, imageURL := range imagesToDelete {
-			publicID := extractPublicID(imageURL)
-			if publicID != "" {
-				err := deleteImagesFromCloudinary(publicID)
-				if err != nil {
-					fmt.Printf("Failed to delete image: %s, error: %v\n", imageURL, err)
-				}
-			}
-		}
+		deleteUnusedImages(params.Content, params.Images)
 
 		slug, err := utils.GenerateUniqueSlug(params.Title, db, r)
 		if err != nil {
@@ -100,7 +91,33 @@ func GetPostByIDHandler(db *database.Queries, user database.User) http.Handler {
 	})
 }
 
-func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
+func GetPostBySlugHandler(db *database.Queries, user database.User) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		slug := chi.URLParam(r, "slug")
+		post, err := db.GetPostBySlug(r.Context(), slug)
+		if err != nil {
+			http.Error(w, "Couldn't get post", http.StatusNotFound) // 404
+			return
+		}
+
+		postUUID, err := uuid.Parse(post.PostID.String())
+		if err != nil {
+			http.Error(w, "Invalid post ID", http.StatusBadRequest) // 400
+			return
+		}
+		postDetails, err := db.GetPostDetailsByID(r.Context(), postUUID)
+		if err != nil {
+			http.Error(w, "Couldn't get post", http.StatusNotFound) // 404
+			return
+		}
+
+		w.WriteHeader(http.StatusOK) // 200
+		json.NewEncoder(w).Encode(postDetails)
+
+	})
+}
+
+func UpdatePostHandler(db *database.Queries, contributor database.Contributor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		postID := chi.URLParam(r, "id")
 
@@ -111,8 +128,9 @@ func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
 		}
 
 		type parameters struct {
-			Title   string `json:"title"`
-			Content string `json:"content"`
+			Title   string   `json:"title"`
+			Content string   `json:"content"`
+			Images  []string `json:"images"`
 		}
 
 		var params parameters
@@ -121,6 +139,8 @@ func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
 			http.Error(w, "Invalid request body", http.StatusBadRequest) // 400
 			return
 		}
+
+		deleteUnusedImages(params.Content, params.Images)
 
 		slug, err := utils.GenerateUniqueSlug(params.Title, db, r)
 		if err != nil {
@@ -142,6 +162,19 @@ func UpdatePostHandler(db *database.Queries, user database.User) http.Handler {
 		w.WriteHeader(http.StatusOK) // 200
 		json.NewEncoder(w).Encode(post)
 	})
+}
+
+func deleteUnusedImages(content string, images []string) {
+	imagesToDelete := findImagesToDelete(content, images)
+	for _, imageURL := range imagesToDelete {
+		publicID := extractPublicID(imageURL)
+		if publicID != "" {
+			err := deleteImagesFromCloudinary(publicID)
+			if err != nil {
+				fmt.Printf("Failed to delete image: %s, error: %v\n", imageURL, err)
+			}
+		}
+	}
 }
 
 func findImagesToDelete(content string, images []string) []string {

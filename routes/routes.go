@@ -52,14 +52,19 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		}, nil, nil, "user"))
 
 	r.Put("/posts/{id}", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.UpdatePostHandler(queries, user).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+		nil,
+		func(w http.ResponseWriter, r *http.Request, contributor database.Contributor) {
+			handlers.UpdatePostHandler(queries, contributor).ServeHTTP(w, r)
+		}, nil, "contributor"))
 
-	r.Get("/posts/{id}", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.GetPostByIDHandler(queries, user).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+	// r.Get("/posts/{id}", middlewares.MiddlewareAuth(queries,
+	// 	func(w http.ResponseWriter, r *http.Request, user database.User) {
+	// 		handlers.GetPostByIDHandler(queries, user).ServeHTTP(w, r)
+	// 	}, nil, nil, "user"))
+
+	r.Get("/posts/{slug}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetPostBySlugHandler(queries, u).ServeHTTP(w, r)
+	}, nil, nil, "user"))
 
 	r.Post("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
@@ -86,7 +91,7 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.UpdateCommentHandler(queries, user).ServeHTTP(w, r)
 		}, nil, nil, "user"))
 
-	r.Get("/posts/{postID}/comments", middlewares.MiddlewareAuth(queries,
+	r.Get("/posts/{postSlug}/comments", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.GetAllCommentsByPostHandler(queries, user).ServeHTTP(w, r)
 		}, nil, nil, "user"))

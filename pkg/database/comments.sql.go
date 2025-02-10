@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -97,27 +98,42 @@ func (q *Queries) GetCommentByID(ctx context.Context, commentID uuid.UUID) (Comm
 
 const getCommentsByPost = `-- name: GetCommentsByPost :many
 SELECT 
-    comment_id, 
-    post_id, 
-    user_id, 
-    parent_comment_id, 
-    content, 
-    created_at, 
-    updated_at
-FROM comments
-WHERE post_id = $1
-ORDER BY created_at ASC
+    c.comment_id, 
+    c.post_id, 
+    c.user_id, 
+    c.parent_comment_id, 
+    c.content, 
+    c.created_at, 
+    c.updated_at,
+    u.username,
+    u.name
+FROM comments c
+JOIN users u ON c.user_id = u.user_id
+WHERE c.post_id = $1
+ORDER BY c.created_at ASC
 `
 
-func (q *Queries) GetCommentsByPost(ctx context.Context, postID uuid.UUID) ([]Comment, error) {
+type GetCommentsByPostRow struct {
+	CommentID       uuid.UUID
+	PostID          uuid.UUID
+	UserID          uuid.UUID
+	ParentCommentID uuid.NullUUID
+	Content         string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Username        string
+	Name            string
+}
+
+func (q *Queries) GetCommentsByPost(ctx context.Context, postID uuid.UUID) ([]GetCommentsByPostRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCommentsByPost, postID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Comment
+	var items []GetCommentsByPostRow
 	for rows.Next() {
-		var i Comment
+		var i GetCommentsByPostRow
 		if err := rows.Scan(
 			&i.CommentID,
 			&i.PostID,
@@ -126,6 +142,8 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, postID uuid.UUID) ([]Co
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Username,
+			&i.Name,
 		); err != nil {
 			return nil, err
 		}

@@ -64,3 +64,34 @@ SELECT
 FROM posts
 WHERE slug = $1;
 
+-- name: GetPostDetailsByID :one
+SELECT 
+    p.post_id, 
+    p.user_id, 
+    p.slug, 
+    p.title, 
+    p.content, 
+    p.created_at, 
+    p.updated_at,
+    u.name AS author_name,
+    u.username AS author_username,
+    COALESCE(upvote_counts.count, 0) AS upvote_count,
+    COALESCE(comment_counts.count, 0) AS comment_count
+FROM posts p
+JOIN users u ON p.user_id = u.user_id
+LEFT JOIN (
+    SELECT 
+        post_id, 
+        COUNT(*) AS count
+    FROM upvotes
+    GROUP BY post_id
+) upvote_counts ON p.post_id = upvote_counts.post_id
+LEFT JOIN (
+    SELECT 
+        post_id, 
+        COUNT(*) AS count
+    FROM comments
+    GROUP BY post_id
+) comment_counts ON p.post_id = comment_counts.post_id
+WHERE p.post_id = $1;
+

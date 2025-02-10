@@ -17,6 +17,8 @@ type Comment struct {
 	PostID          uuid.UUID     `json:"post_id"`
 	UserID          uuid.UUID     `json:"user_id"`
 	Replies         []Comment     `json:"replies"`
+	Username        string        `json:"username"`
+	Name            string        `json:"name"`
 }
 
 func CreateCommentHandler(db *database.Queries, user database.User) http.Handler {
@@ -121,18 +123,22 @@ func DeleteCommentHandler(db *database.Queries, user database.User) http.Handler
 
 func GetAllCommentsByPostHandler(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		PostID := chi.URLParam(r, "postID")
-		postID, err := uuid.Parse(PostID)
+		postSlug := chi.URLParam(r, "postSlug")
+		PostID, err := db.GetPostBySlug(r.Context(), postSlug)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			http.Error(w, "Failed to get post ID: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		postID := PostID.PostID
 
 		dbcomments, err := db.GetCommentsByPost(r.Context(), postID)
 		if err != nil {
 			http.Error(w, "Failed to get comments: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		fmt.Println(dbcomments)
 
 		var comments []Comment
 
@@ -143,6 +149,8 @@ func GetAllCommentsByPostHandler(db *database.Queries, user database.User) http.
 				ParentCommentID: dbcomment.ParentCommentID,
 				PostID:          dbcomment.PostID,
 				UserID:          dbcomment.UserID,
+				Username:        dbcomment.Username,
+				Name:            dbcomment.Name,
 			})
 
 		}
