@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -143,8 +142,17 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			Path:     "/",
 		})
 
+		returnUser := ReturnedUser{
+			UserID:         user.UserID,
+			Name:           user.Name,
+			Email:          user.Email,
+			Username:       user.Username,
+			SuspendedUntil: user.SuspendedUntil.Time,
+			Role:           "user",
+		}
+
 		response := map[string]interface{}{
-			"user":          user,
+			"user":          returnUser,
 			"access_token":  accessToken,
 			"refresh_token": refreshToken,
 		}
@@ -382,7 +390,7 @@ func GetProfileDataHandler(db *database.Queries, user database.User) http.Handle
 		response := map[string]interface{}{
 			"user": returnedUser,
 		}
-		fmt.Println("User: ", returnedUser, isFollowing)
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}
@@ -450,7 +458,7 @@ func TestMiddlewaresHandler(db *database.Queries, user database.User) http.Handl
 		response := map[string]interface{}{
 			"user": user,
 		}
-		fmt.Println("User: ", user)
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}
