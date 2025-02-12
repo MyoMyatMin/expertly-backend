@@ -319,7 +319,7 @@ func CheckAuthStatsHandler(db *database.Queries, user database.User, moderator d
 	}
 }
 
-func GetProfileDataHandler(db *database.Queries, user database.User) http.HandlerFunc {
+func GetProfileDataHandler(db *database.Queries, user database.User, moderator database.Moderator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		username := chi.URLParam(r, "username")
@@ -396,7 +396,7 @@ func GetProfileDataHandler(db *database.Queries, user database.User) http.Handle
 	}
 }
 
-func GetContributorProfilePostsHandler(db *database.Queries, user database.User) http.HandlerFunc {
+func GetContributorProfilePostsHandler(db *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username := chi.URLParam(r, "username")
 

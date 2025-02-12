@@ -64,7 +64,7 @@ func DeleteSavedPost(db *database.Queries, user database.User) http.Handler {
 	})
 }
 
-func GetSavedPosts(db *database.Queries, user database.User) http.Handler {
+func GetSavedPosts(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username := chi.URLParam(r, "username")
 

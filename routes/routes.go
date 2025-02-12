@@ -57,11 +57,6 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.UpdatePostHandler(queries, contributor).ServeHTTP(w, r)
 		}, nil, "contributor"))
 
-	// r.Get("/posts/{id}", middlewares.MiddlewareAuth(queries,
-	// 	func(w http.ResponseWriter, r *http.Request, user database.User) {
-	// 		handlers.GetPostByIDHandler(queries, user).ServeHTTP(w, r)
-	// 	}, nil, nil, "user"))
-
 	r.Get("/posts/{slug}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
 		handlers.GetPostBySlugHandler(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
@@ -121,10 +116,13 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.GetFeedHandler(queries, user).ServeHTTP(w, r)
 		}, nil, nil, "user"))
 
-	r.Get("/users/{username}/following", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
+	r.Get("/users/{username}/following",
+		middlewares.MiddlewareModeratorOrUser(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
 			handlers.GetFollowingListByIDHandler(queries).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+		},
+			func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+				handlers.GetFollowingListByIDHandler(queries).ServeHTTP(w, r)
+			}))
 
 	r.Get("/users/{username}/followers", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
@@ -177,15 +175,15 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.CreateContributorApplication(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
-	r.Get("/contributor_applications", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+	r.Get("/admin/contributor_applications", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.GetContributorApplications(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
 
-	r.Put("/contributor_applications/{id}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+	r.Put("/admin/contributor_applications/{id}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.UpdateContributorApplication(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
 
-	r.Get("/contributor_applications/{id}", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+	r.Get("/admin/contributor_applications/{id}", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.GetContributorApplicationByID(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
 
@@ -198,19 +196,28 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.DeleteSavedPost(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
-	r.Get("/saved_posts/{username}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
-		handlers.GetSavedPosts(queries, u).ServeHTTP(w, r)
-	}, nil, nil, "user"))
+	r.Get("/saved_posts/{username}", middlewares.MiddlewareModeratorOrUser(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetSavedPosts(queries).ServeHTTP(w, r)
+	},
+		func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+			handlers.GetSavedPosts(queries).ServeHTTP(w, r)
+		}))
 
 	// Profile Routes
-	r.Get("/profile/{username}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
-		handlers.GetProfileDataHandler(queries, u).ServeHTTP(w, r)
-	}, nil, nil, "user"))
+	r.Get("/profile/{username}", middlewares.MiddlewareModeratorOrUser(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetProfileDataHandler(queries, u, database.Moderator{}).ServeHTTP(w, r)
+	},
+		func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+			handlers.GetProfileDataHandler(queries, database.User{}, m).ServeHTTP(w, r)
+		}))
 
 	// Profile Contributor Routes
-	r.Get("/profile/{username}/posts", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
-		handlers.GetContributorProfilePostsHandler(queries, u).ServeHTTP(w, r)
-	}, nil, nil, "user"))
+	r.Get("/profile/{username}/posts", middlewares.MiddlewareModeratorOrUser(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetContributorProfilePostsHandler(queries).ServeHTTP(w, r)
+	},
+		func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+			handlers.GetContributorProfilePostsHandler(queries).ServeHTTP(w, r)
+		}))
 
 	r.Put("/profile/update", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
 		handlers.UpdateUserHandler(queries, u).ServeHTTP(w, r)

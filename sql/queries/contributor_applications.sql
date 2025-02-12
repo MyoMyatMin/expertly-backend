@@ -16,16 +16,19 @@ RETURNING contri_app_id, user_id, expertise_proofs, identity_proof, initial_subm
 
 -- name: GetContributorApplication :one
 SELECT 
-    contri_app_id,
-    user_id,
-    expertise_proofs,
-    identity_proof,
-    initial_submission,
-    status,
-    created_at,
-    reviewed_at
-FROM contributor_applications
-WHERE contri_app_id = $1;
+    ca.contri_app_id,
+    ca.user_id,
+    ca.expertise_proofs,
+    ca.identity_proof,
+    ca.initial_submission,
+    ca.status,
+    ca.created_at,
+    ca.reviewed_at,
+    u.name AS name,
+    u.username AS username
+FROM contributor_applications ca
+JOIN users u ON ca.user_id = u.user_id
+WHERE ca.contri_app_id = $1;
 
 -- name: UpdateContributorApplication :one
 UPDATE contributor_applications
@@ -38,13 +41,16 @@ RETURNING contri_app_id, user_id, expertise_proofs, identity_proof, initial_subm
 
 -- name: ListContributorApplications :many
 SELECT 
-    contri_app_id,
-    user_id,
-    expertise_proofs,
-    identity_proof,
-    initial_submission,
-    status,
-    created_at,
-    reviewed_at
-FROM contributor_applications
-ORDER BY created_at DESC;
+    ca.contri_app_id,
+    ca.user_id,
+    ca.expertise_proofs,
+    ca.identity_proof,
+    ca.initial_submission,
+    ca.status,
+    ca.created_at,
+    ca.reviewed_at,
+    ca.reviewed_by,
+    u.name AS name
+FROM contributor_applications ca
+JOIN users u ON ca.user_id = u.user_id
+ORDER BY ca.created_at DESC;

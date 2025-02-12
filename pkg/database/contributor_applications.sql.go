@@ -73,16 +73,19 @@ func (q *Queries) ApplyContributorApplication(ctx context.Context, arg ApplyCont
 
 const getContributorApplication = `-- name: GetContributorApplication :one
 SELECT 
-    contri_app_id,
-    user_id,
-    expertise_proofs,
-    identity_proof,
-    initial_submission,
-    status,
-    created_at,
-    reviewed_at
-FROM contributor_applications
-WHERE contri_app_id = $1
+    ca.contri_app_id,
+    ca.user_id,
+    ca.expertise_proofs,
+    ca.identity_proof,
+    ca.initial_submission,
+    ca.status,
+    ca.created_at,
+    ca.reviewed_at,
+    u.name AS name,
+    u.username AS username
+FROM contributor_applications ca
+JOIN users u ON ca.user_id = u.user_id
+WHERE ca.contri_app_id = $1
 `
 
 type GetContributorApplicationRow struct {
@@ -94,6 +97,8 @@ type GetContributorApplicationRow struct {
 	Status            sql.NullString
 	CreatedAt         sql.NullTime
 	ReviewedAt        sql.NullTime
+	Name              string
+	Username          string
 }
 
 func (q *Queries) GetContributorApplication(ctx context.Context, contriAppID uuid.UUID) (GetContributorApplicationRow, error) {
@@ -108,22 +113,27 @@ func (q *Queries) GetContributorApplication(ctx context.Context, contriAppID uui
 		&i.Status,
 		&i.CreatedAt,
 		&i.ReviewedAt,
+		&i.Name,
+		&i.Username,
 	)
 	return i, err
 }
 
 const listContributorApplications = `-- name: ListContributorApplications :many
 SELECT 
-    contri_app_id,
-    user_id,
-    expertise_proofs,
-    identity_proof,
-    initial_submission,
-    status,
-    created_at,
-    reviewed_at
-FROM contributor_applications
-ORDER BY created_at DESC
+    ca.contri_app_id,
+    ca.user_id,
+    ca.expertise_proofs,
+    ca.identity_proof,
+    ca.initial_submission,
+    ca.status,
+    ca.created_at,
+    ca.reviewed_at,
+    ca.reviewed_by,
+    u.name AS name
+FROM contributor_applications ca
+JOIN users u ON ca.user_id = u.user_id
+ORDER BY ca.created_at DESC
 `
 
 type ListContributorApplicationsRow struct {
@@ -135,6 +145,8 @@ type ListContributorApplicationsRow struct {
 	Status            sql.NullString
 	CreatedAt         sql.NullTime
 	ReviewedAt        sql.NullTime
+	ReviewedBy        uuid.NullUUID
+	Name              string
 }
 
 func (q *Queries) ListContributorApplications(ctx context.Context) ([]ListContributorApplicationsRow, error) {
@@ -155,6 +167,8 @@ func (q *Queries) ListContributorApplications(ctx context.Context) ([]ListContri
 			&i.Status,
 			&i.CreatedAt,
 			&i.ReviewedAt,
+			&i.ReviewedBy,
+			&i.Name,
 		); err != nil {
 			return nil, err
 		}
