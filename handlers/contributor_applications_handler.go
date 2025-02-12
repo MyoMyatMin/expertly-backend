@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
@@ -52,23 +53,45 @@ func UpdateContributorApplication(db *database.Queries, moderator database.Moder
 		}
 
 		type parameters struct {
-			Status string `json:"status"`
+			Status string `json:"app_status"`
 		}
 
 		var params parameters
+
+		contri_data, err := db.GetContributorApplication(r.Context(), parsedID)
+		if err != nil {
+			http.Error(w, "Couldn't get application", http.StatusNotFound)
+			return
+		}
+
+		if contri_data.ReviewedAt.Valid {
+			http.Error(w, "Application already reviewed", http.StatusConflict)
+			return
+		}
 
 		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
-		status := sql.NullString{String: params.Status, Valid: true}
 		application, err := db.UpdateContributorApplication(r.Context(), database.UpdateContributorApplicationParams{
 			ContriAppID: parsedID,
-			Status:      status,
+			Status:      sql.NullString{String: params.Status, Valid: true},
 			ReviewedBy:  uuid.NullUUID{UUID: moderator.ModeratorID, Valid: true},
 		})
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Couldn't update application", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = db.CreateContributor(r.Context(), database.CreateContributorParams{
+			UserID:          contri_data.UserID,
+			ExpertiseFields: contri_data.ExpertiseProofs,
+		})
+
+		if err != nil {
+			fmt.Println(err)
+			http.Error(w, "Couldn't create contributor", http.StatusInternalServerError)
 			return
 		}
 

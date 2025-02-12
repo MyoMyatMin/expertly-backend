@@ -25,9 +25,11 @@ SELECT
     ca.created_at,
     ca.reviewed_at,
     u.name AS name,
-    u.username AS username
+    u.username AS username,
+    m.name AS reviewer_name
 FROM contributor_applications ca
 JOIN users u ON ca.user_id = u.user_id
+LEFT JOIN moderators m ON ca.reviewed_by = m.moderator_id
 WHERE ca.contri_app_id = $1;
 
 -- name: UpdateContributorApplication :one
@@ -50,7 +52,9 @@ SELECT
     ca.created_at,
     ca.reviewed_at,
     ca.reviewed_by,
-    u.name AS name
+    u.name AS name,
+    m.name AS reviewer_name
 FROM contributor_applications ca
 JOIN users u ON ca.user_id = u.user_id
+LEFT JOIN moderators m ON ca.reviewed_by = m.moderator_id
 ORDER BY ca.created_at DESC;

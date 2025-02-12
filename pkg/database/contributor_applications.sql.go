@@ -82,9 +82,11 @@ SELECT
     ca.created_at,
     ca.reviewed_at,
     u.name AS name,
-    u.username AS username
+    u.username AS username,
+    m.name AS reviewer_name
 FROM contributor_applications ca
 JOIN users u ON ca.user_id = u.user_id
+LEFT JOIN moderators m ON ca.reviewed_by = m.moderator_id
 WHERE ca.contri_app_id = $1
 `
 
@@ -99,6 +101,7 @@ type GetContributorApplicationRow struct {
 	ReviewedAt        sql.NullTime
 	Name              string
 	Username          string
+	ReviewerName      sql.NullString
 }
 
 func (q *Queries) GetContributorApplication(ctx context.Context, contriAppID uuid.UUID) (GetContributorApplicationRow, error) {
@@ -115,6 +118,7 @@ func (q *Queries) GetContributorApplication(ctx context.Context, contriAppID uui
 		&i.ReviewedAt,
 		&i.Name,
 		&i.Username,
+		&i.ReviewerName,
 	)
 	return i, err
 }
@@ -130,9 +134,11 @@ SELECT
     ca.created_at,
     ca.reviewed_at,
     ca.reviewed_by,
-    u.name AS name
+    u.name AS name,
+    m.name AS reviewer_name
 FROM contributor_applications ca
 JOIN users u ON ca.user_id = u.user_id
+LEFT JOIN moderators m ON ca.reviewed_by = m.moderator_id
 ORDER BY ca.created_at DESC
 `
 
@@ -147,6 +153,7 @@ type ListContributorApplicationsRow struct {
 	ReviewedAt        sql.NullTime
 	ReviewedBy        uuid.NullUUID
 	Name              string
+	ReviewerName      sql.NullString
 }
 
 func (q *Queries) ListContributorApplications(ctx context.Context) ([]ListContributorApplicationsRow, error) {
@@ -169,6 +176,7 @@ func (q *Queries) ListContributorApplications(ctx context.Context) ([]ListContri
 			&i.ReviewedAt,
 			&i.ReviewedBy,
 			&i.Name,
+			&i.ReviewerName,
 		); err != nil {
 			return nil, err
 		}
