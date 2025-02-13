@@ -197,7 +197,7 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 	}, "moderator"))
 
 	//Contributor Application Routes
-	r.Post("/contributor_applications", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+	r.Post("/contributor_application", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
 		handlers.CreateContributorApplication(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 

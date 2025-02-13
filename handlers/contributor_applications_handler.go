@@ -15,9 +15,9 @@ import (
 func CreateContributorApplication(db *database.Queries, user database.User) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
-			ExpertiseProofs   []string `json:"expertise_proofs"`
-			IdentityProof     string   `json:"identity_proof"`
-			InitialSubmission string   `json:"initial_submission"`
+			ExpertiseProofs   []string `json:"expertiseLinks"`
+			IdentityProof     string   `json:"identityProofUrl"`
+			InitialSubmission string   `json:"submission"`
 		}
 
 		var params parameters
@@ -26,7 +26,7 @@ func CreateContributorApplication(db *database.Queries, user database.User) http
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
-
+		fmt.Println(params)
 		applicaition, err := db.ApplyContributorApplication(r.Context(), database.ApplyContributorApplicationParams{
 			UserID:            user.UserID,
 			ExpertiseProofs:   params.ExpertiseProofs,
@@ -34,6 +34,7 @@ func CreateContributorApplication(db *database.Queries, user database.User) http
 			InitialSubmission: params.InitialSubmission,
 		})
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Couldn't create application", http.StatusInternalServerError)
 			return
 		}
