@@ -121,7 +121,7 @@ func DeleteCommentHandler(db *database.Queries, user database.User) http.Handler
 	})
 }
 
-func GetAllCommentsByPostHandler(db *database.Queries, user database.User) http.Handler {
+func GetAllCommentsByPostHandler(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		postSlug := chi.URLParam(r, "postSlug")
 		PostID, err := db.GetPostBySlug(r.Context(), postSlug)

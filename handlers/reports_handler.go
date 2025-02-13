@@ -103,7 +103,7 @@ func UpdateReportStatusHandler(db *database.Queries, moderator database.Moderato
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
-
+		fmt.Println("UpdateReportStatusHandler", params, reportID)
 		if !validStatuses[params.Status] {
 			http.Error(w, "Invalid status", http.StatusBadRequest)
 			return
@@ -124,5 +124,34 @@ func UpdateReportStatusHandler(db *database.Queries, moderator database.Moderato
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Report status updated successfully"})
+	})
+}
+
+func GetReportedContributorsHandler(db *database.Queries, moderator database.Moderator) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("GetReportedContributorsHandler")
+		reports, err := db.ListReportedContributors(r.Context())
+		if err != nil {
+			fmt.Print(err)
+			http.Error(w, "Couldn't get reports", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(reports)
+	})
+}
+
+func GetReportedUserHandler(db *database.Queries, moderator database.Moderator) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reports, err := db.ListReportedUsers(r.Context())
+		if err != nil {
+			fmt.Print(err)
+			http.Error(w, "Couldn't get reports", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(reports)
 	})
 }

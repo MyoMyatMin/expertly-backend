@@ -57,9 +57,12 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.UpdatePostHandler(queries, contributor).ServeHTTP(w, r)
 		}, nil, "contributor"))
 
-	r.Get("/posts/{slug}", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
-		handlers.GetPostBySlugHandler(queries, u).ServeHTTP(w, r)
-	}, nil, nil, "user"))
+	r.Get("/posts/{slug}",
+		middlewares.MiddlewareModeratorOrUser(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+			handlers.GetPostBySlugHandler(queries).ServeHTTP(w, r)
+		}, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+			handlers.GetPostBySlugHandler(queries).ServeHTTP(w, r)
+		}))
 
 	r.Post("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
@@ -86,10 +89,13 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.UpdateCommentHandler(queries, user).ServeHTTP(w, r)
 		}, nil, nil, "user"))
 
-	r.Get("/posts/{postSlug}/comments", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.GetAllCommentsByPostHandler(queries, user).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+	r.Get("/posts/{postSlug}/comments", middlewares.MiddlewareModeratorOrUser(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.GetAllCommentsByPostHandler(queries).ServeHTTP(w, r)
+	},
+
+		func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+			handlers.GetAllCommentsByPostHandler(queries).ServeHTTP(w, r)
+		}))
 
 	// r.Get("/following", middlewares.MiddlewareAuth(queries,
 	// 	func(w http.ResponseWriter, r *http.Request, user database.User) {
@@ -149,12 +155,20 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.CreateReportHandler(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
-	r.Get("/reports", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+	r.Get("/admin/reports", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.GetReportsHandler(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
 
-	r.Put("/reports/{reportID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+	r.Put("/admin/reports/{reportID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.UpdateReportStatusHandler(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Get("/admin/contributors/reports", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetReportedContributorsHandler(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Get("/admin/users/reports", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetReportedUserHandler(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
 
 	// Appeal Routes

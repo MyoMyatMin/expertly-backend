@@ -91,7 +91,7 @@ func GetPostByIDHandler(db *database.Queries, user database.User) http.Handler {
 	})
 }
 
-func GetPostBySlugHandler(db *database.Queries, user database.User) http.Handler {
+func GetPostBySlugHandler(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
 		post, err := db.GetPostBySlug(r.Context(), slug)
