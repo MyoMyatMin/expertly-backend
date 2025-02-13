@@ -17,7 +17,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func GetAllPostsHandler(db *database.Queries, user database.User) http.Handler {
+func GetAllPostsHandler(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		posts, err := db.ListPosts(r.Context())
 		if err != nil {

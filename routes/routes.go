@@ -46,10 +46,7 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.CheckAuthStatsHandler(queries, database.User{}, moderator).ServeHTTP(w, r)
 		}))
 
-	r.Get("/posts", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.GetAllPostsHandler(queries, user).ServeHTTP(w, r)
-		}, nil, nil, "user"))
+	r.Get("/posts", handlers.GetAllPostsHandler(queries).ServeHTTP)
 
 	r.Put("/posts/{id}", middlewares.MiddlewareAuth(queries,
 		nil,

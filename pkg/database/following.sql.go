@@ -44,7 +44,9 @@ func (q *Queries) DeleteFollow(ctx context.Context, arg DeleteFollowParams) erro
 }
 
 const getFeed = `-- name: GetFeed :many
-SELECT posts.post_id, posts.title, posts.content, posts.slug, posts.user_id, posts.created_at, posts.updated_at, users.name, users.username
+SELECT posts.post_id, posts.title, posts.content, posts.slug, posts.user_id, posts.created_at, posts.updated_at, users.name, users.username, 
+    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id) AS comment_count,
+    (SELECT COUNT(*) FROM upvotes WHERE upvotes.post_id = posts.post_id) AS upvote_count
 FROM posts
 JOIN following ON posts.user_id = following.following_id
 JOIN users ON posts.user_id = users.user_id
@@ -53,15 +55,17 @@ ORDER BY posts.created_at DESC
 `
 
 type GetFeedRow struct {
-	PostID    uuid.UUID
-	Title     string
-	Content   string
-	Slug      string
-	UserID    uuid.UUID
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
-	Name      string
-	Username  string
+	PostID       uuid.UUID
+	Title        string
+	Content      string
+	Slug         string
+	UserID       uuid.UUID
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+	Name         string
+	Username     string
+	CommentCount int64
+	UpvoteCount  int64
 }
 
 func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]GetFeedRow, error) {
@@ -83,6 +87,8 @@ func (q *Queries) GetFeed(ctx context.Context, followerID uuid.UUID) ([]GetFeedR
 			&i.UpdatedAt,
 			&i.Name,
 			&i.Username,
+			&i.CommentCount,
+			&i.UpvoteCount,
 		); err != nil {
 			return nil, err
 		}

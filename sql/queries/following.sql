@@ -26,7 +26,9 @@ DELETE FROM following
 WHERE follower_id = $1 AND following_id = $2;
 
 -- name: GetFeed :many
-SELECT posts.*, users.name, users.username
+SELECT posts.*, users.name, users.username, 
+    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.post_id) AS comment_count,
+    (SELECT COUNT(*) FROM upvotes WHERE upvotes.post_id = posts.post_id) AS upvote_count
 FROM posts
 JOIN following ON posts.user_id = following.following_id
 JOIN users ON posts.user_id = users.user_id

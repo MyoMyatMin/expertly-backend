@@ -221,25 +221,47 @@ func (q *Queries) GetPostDetailsByID(ctx context.Context, postID uuid.UUID) (Get
 
 const listPosts = `-- name: ListPosts :many
 SELECT 
-    post_id, 
-    user_id, 
-    slug, 
-    title, 
-    content, 
-    created_at, 
-    updated_at
-FROM posts
-ORDER BY created_at DESC
+    p.post_id, 
+    p.slug, 
+    p.title, 
+    p.user_id, 
+    p.content, 
+    p.created_at, 
+    p.updated_at, 
+    COALESCE(upvote_counts.count, 0) AS upvote_count, 
+    COALESCE(comment_counts.count, 0) AS comment_count
+FROM posts p
+LEFT JOIN (
+    SELECT 
+        post_id, 
+        COUNT(*) AS count 
+    FROM comments 
+    GROUP BY post_id
+) comment_counts ON p.post_id = comment_counts.post_id
+LEFT JOIN (
+    SELECT 
+        post_id, 
+        COUNT(*) AS count 
+    FROM upvotes 
+    GROUP BY post_id
+) upvote_counts ON p.post_id = upvote_counts.post_id
+WHERE p.created_at >= NOW() - INTERVAL '30 days'  -- Get posts from last 30 days
+ORDER BY 
+    (COALESCE(upvote_counts.count, 0) * 2 + COALESCE(comment_counts.count, 0)) DESC, -- Weight upvotes & comments
+    p.created_at DESC -- Prioritize newer posts if engagement is similar
+LIMIT 20
 `
 
 type ListPostsRow struct {
-	PostID    uuid.UUID
-	UserID    uuid.UUID
-	Slug      string
-	Title     string
-	Content   string
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	PostID       uuid.UUID
+	Slug         string
+	Title        string
+	UserID       uuid.UUID
+	Content      string
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+	UpvoteCount  int64
+	CommentCount int64
 }
 
 func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
@@ -253,12 +275,14 @@ func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
 		var i ListPostsRow
 		if err := rows.Scan(
 			&i.PostID,
-			&i.UserID,
 			&i.Slug,
 			&i.Title,
+			&i.UserID,
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UpvoteCount,
+			&i.CommentCount,
 		); err != nil {
 			return nil, err
 		}
