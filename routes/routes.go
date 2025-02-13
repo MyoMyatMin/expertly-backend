@@ -176,11 +176,23 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.CreateAppealHandler(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
-	r.Get("/appeals", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+	r.Get("/admin/appeals", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.GetAppealsHandler(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
 
-	r.Put("/appeals/{appealID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+	r.Get("/admin/contributors/appeals", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetContributorsAppeals(queries).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Get("/admin/users/appeals", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetUsersAppeals(queries).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Get("/admin/appeals/{appealID}", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
+		handlers.GetAppealByIDHandler(queries, m).ServeHTTP(w, r)
+	}, "moderator"))
+
+	r.Put("/admin/appeals/{appealID}/status", middlewares.MiddlewareAuth(queries, nil, nil, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 		handlers.UpdateAppealStatus(queries, m).ServeHTTP(w, r)
 	}, "moderator"))
 

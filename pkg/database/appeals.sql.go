@@ -46,46 +46,69 @@ func (q *Queries) CreateAppeal(ctx context.Context, arg CreateAppealParams) (App
 
 const getAppealById = `-- name: GetAppealById :one
 SELECT 
-    a.appeal_id as appeal_id,
-    a.appealed_by as appealed_by,
-    a.target_report_id as target_report_id,
-    a.reason as reason,
-    a.status as status,
-    a.reviewed_at as reviewed_at,
-    a.reviewedby as reviewedby,
-    a.created_at as created_at,
+    -- Appeal fields
+    a.appeal_id,
+    a.appealed_by,
+    a.target_report_id,
+    a.reason as appeal_reason,
+    a.status as appeal_status,
+    a.reviewed_at,
+    a.reviewedby,
+    a.created_at,
 
+    -- Appealing user fields
     u.user_id as appealed_by_id,
     u.name as appealed_by_name,
 
+    -- Report fields
     r.report_id as target_report_id,
     r.reason as target_report_reason,
-    r.target_post_id as target_post_id,
-    r.target_user_id as target_user_id,
-    r.target_comment_id as target_comment_id
+    r.target_post_id,
+    r.target_user_id,
+    r.target_comment_id,
 
+    -- Added: Comment content
+    c.content as comment_content,
+
+    -- Added: Post slug
+    p.slug as post_slug,
+
+    -- Added: Target user details
+    tu.suspended_until as target_user_suspended_until,
+    tu.username as target_user_username,
+
+    m.name as reviewer_name
 FROM appeals a
 LEFT JOIN users u ON a.appealed_by = u.user_id
 LEFT JOIN reports r ON a.target_report_id = r.report_id
+LEFT JOIN comments c ON r.target_comment_id = c.comment_id
+LEFT JOIN posts p ON r.target_post_id = p.post_id
+LEFT JOIN users tu ON r.target_user_id = tu.user_id
+LEFT JOIN moderators m ON a.reviewedby = m.moderator_id
 WHERE a.appeal_id = $1
 `
 
 type GetAppealByIdRow struct {
-	AppealID           uuid.UUID
-	AppealedBy         uuid.UUID
-	TargetReportID     uuid.UUID
-	Reason             string
-	Status             sql.NullString
-	ReviewedAt         sql.NullTime
-	Reviewedby         uuid.NullUUID
-	CreatedAt          sql.NullTime
-	AppealedByID       uuid.NullUUID
-	AppealedByName     sql.NullString
-	TargetReportID_2   uuid.NullUUID
-	TargetReportReason sql.NullString
-	TargetPostID       uuid.NullUUID
-	TargetUserID       uuid.NullUUID
-	TargetCommentID    uuid.NullUUID
+	AppealID                 uuid.UUID
+	AppealedBy               uuid.UUID
+	TargetReportID           uuid.UUID
+	AppealReason             string
+	AppealStatus             sql.NullString
+	ReviewedAt               sql.NullTime
+	Reviewedby               uuid.NullUUID
+	CreatedAt                sql.NullTime
+	AppealedByID             uuid.NullUUID
+	AppealedByName           sql.NullString
+	TargetReportID_2         uuid.NullUUID
+	TargetReportReason       sql.NullString
+	TargetPostID             uuid.NullUUID
+	TargetUserID             uuid.NullUUID
+	TargetCommentID          uuid.NullUUID
+	CommentContent           sql.NullString
+	PostSlug                 sql.NullString
+	TargetUserSuspendedUntil sql.NullTime
+	TargetUserUsername       sql.NullString
+	ReviewerName             sql.NullString
 }
 
 func (q *Queries) GetAppealById(ctx context.Context, appealID uuid.UUID) (GetAppealByIdRow, error) {
@@ -95,8 +118,8 @@ func (q *Queries) GetAppealById(ctx context.Context, appealID uuid.UUID) (GetApp
 		&i.AppealID,
 		&i.AppealedBy,
 		&i.TargetReportID,
-		&i.Reason,
-		&i.Status,
+		&i.AppealReason,
+		&i.AppealStatus,
 		&i.ReviewedAt,
 		&i.Reviewedby,
 		&i.CreatedAt,
@@ -107,6 +130,11 @@ func (q *Queries) GetAppealById(ctx context.Context, appealID uuid.UUID) (GetApp
 		&i.TargetPostID,
 		&i.TargetUserID,
 		&i.TargetCommentID,
+		&i.CommentContent,
+		&i.PostSlug,
+		&i.TargetUserSuspendedUntil,
+		&i.TargetUserUsername,
+		&i.ReviewerName,
 	)
 	return i, err
 }
@@ -180,6 +208,199 @@ func (q *Queries) ListAllAppealDetails(ctx context.Context) ([]ListAllAppealDeta
 			&i.TargetPostID,
 			&i.TargetUserID,
 			&i.TargetCommentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAppealsByContributors = `-- name: ListAppealsByContributors :many
+SELECT 
+    a.appeal_id as appeal_id,
+    a.appealed_by as appealed_by,
+    a.target_report_id as target_report_id,
+    a.reason as reason,
+    a.status as status,
+    a.reviewed_at as reviewed_at,
+    a.reviewedby as reviewedby,
+    a.created_at as created_at,
+
+    u.user_id as appealed_by_id,
+    u.name as appealed_by_name,
+    u.username as appealed_by_username,
+
+    r.report_id as target_report_id,
+    r.reason as target_report_reason,
+    r.target_post_id as target_post_id,
+    r.target_user_id as target_user_id,
+    r.target_comment_id as target_comment_id,
+
+    -- Moderator Details
+    m.moderator_id AS reviewer_moderator_id,
+    m.name AS reviewer_name
+
+FROM appeals a
+LEFT JOIN users u ON a.appealed_by = u.user_id
+LEFT JOIN reports r ON a.target_report_id = r.report_id
+INNER JOIN contributors c ON u.user_id = c.user_id  -- Check if user is a contributor
+LEFT JOIN moderators m ON a.reviewedby = m.moderator_id
+ORDER BY a.created_at DESC
+`
+
+type ListAppealsByContributorsRow struct {
+	AppealID            uuid.UUID
+	AppealedBy          uuid.UUID
+	TargetReportID      uuid.UUID
+	Reason              string
+	Status              sql.NullString
+	ReviewedAt          sql.NullTime
+	Reviewedby          uuid.NullUUID
+	CreatedAt           sql.NullTime
+	AppealedByID        uuid.NullUUID
+	AppealedByName      sql.NullString
+	AppealedByUsername  sql.NullString
+	TargetReportID_2    uuid.NullUUID
+	TargetReportReason  sql.NullString
+	TargetPostID        uuid.NullUUID
+	TargetUserID        uuid.NullUUID
+	TargetCommentID     uuid.NullUUID
+	ReviewerModeratorID uuid.NullUUID
+	ReviewerName        sql.NullString
+}
+
+func (q *Queries) ListAppealsByContributors(ctx context.Context) ([]ListAppealsByContributorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAppealsByContributors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAppealsByContributorsRow
+	for rows.Next() {
+		var i ListAppealsByContributorsRow
+		if err := rows.Scan(
+			&i.AppealID,
+			&i.AppealedBy,
+			&i.TargetReportID,
+			&i.Reason,
+			&i.Status,
+			&i.ReviewedAt,
+			&i.Reviewedby,
+			&i.CreatedAt,
+			&i.AppealedByID,
+			&i.AppealedByName,
+			&i.AppealedByUsername,
+			&i.TargetReportID_2,
+			&i.TargetReportReason,
+			&i.TargetPostID,
+			&i.TargetUserID,
+			&i.TargetCommentID,
+			&i.ReviewerModeratorID,
+			&i.ReviewerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAppealsByUsers = `-- name: ListAppealsByUsers :many
+SELECT 
+    a.appeal_id as appeal_id,
+    a.appealed_by as appealed_by,
+    a.target_report_id as target_report_id,
+    a.reason as reason,
+    a.status as status,
+    a.reviewed_at as reviewed_at,
+    a.reviewedby as reviewedby,
+    a.created_at as created_at,
+
+    u.user_id as appealed_by_id,
+    u.name as appealed_by_name,
+    u.username as appealed_by_username,
+
+    r.report_id as target_report_id,
+    r.reason as target_report_reason,
+    r.target_post_id as target_post_id,
+    r.target_user_id as target_user_id,
+    r.target_comment_id as target_comment_id,
+
+    -- Moderator Details
+    m.moderator_id AS reviewer_moderator_id,
+    m.name AS reviewer_name
+
+FROM appeals a
+LEFT JOIN users u ON a.appealed_by = u.user_id
+LEFT JOIN reports r ON a.target_report_id = r.report_id
+LEFT JOIN contributors c ON u.user_id = c.user_id  -- Check if user is a contributor
+LEFT JOIN moderators m ON a.reviewedby = m.moderator_id
+WHERE c.user_id IS NULL  -- Ensures appealing user is NOT a contributor
+ORDER BY a.created_at DESC
+`
+
+type ListAppealsByUsersRow struct {
+	AppealID            uuid.UUID
+	AppealedBy          uuid.UUID
+	TargetReportID      uuid.UUID
+	Reason              string
+	Status              sql.NullString
+	ReviewedAt          sql.NullTime
+	Reviewedby          uuid.NullUUID
+	CreatedAt           sql.NullTime
+	AppealedByID        uuid.NullUUID
+	AppealedByName      sql.NullString
+	AppealedByUsername  sql.NullString
+	TargetReportID_2    uuid.NullUUID
+	TargetReportReason  sql.NullString
+	TargetPostID        uuid.NullUUID
+	TargetUserID        uuid.NullUUID
+	TargetCommentID     uuid.NullUUID
+	ReviewerModeratorID uuid.NullUUID
+	ReviewerName        sql.NullString
+}
+
+func (q *Queries) ListAppealsByUsers(ctx context.Context) ([]ListAppealsByUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAppealsByUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAppealsByUsersRow
+	for rows.Next() {
+		var i ListAppealsByUsersRow
+		if err := rows.Scan(
+			&i.AppealID,
+			&i.AppealedBy,
+			&i.TargetReportID,
+			&i.Reason,
+			&i.Status,
+			&i.ReviewedAt,
+			&i.Reviewedby,
+			&i.CreatedAt,
+			&i.AppealedByID,
+			&i.AppealedByName,
+			&i.AppealedByUsername,
+			&i.TargetReportID_2,
+			&i.TargetReportReason,
+			&i.TargetPostID,
+			&i.TargetUserID,
+			&i.TargetCommentID,
+			&i.ReviewerModeratorID,
+			&i.ReviewerName,
 		); err != nil {
 			return nil, err
 		}

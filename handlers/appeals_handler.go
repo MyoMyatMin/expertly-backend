@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
@@ -53,7 +54,9 @@ func UpdateAppealStatus(db *database.Queries, moderator database.Moderator) http
 
 		var params parameters
 		err := json.NewDecoder(r.Body).Decode(&params)
+
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -61,6 +64,7 @@ func UpdateAppealStatus(db *database.Queries, moderator database.Moderator) http
 		appealID, err := uuid.Parse(appealIDStr)
 
 		if err != nil {
+			fmt.Println(err, appealIDStr)
 			http.Error(w, "Invalid appeal ID", http.StatusBadRequest)
 			return
 		}
@@ -111,5 +115,33 @@ func GetAppealByIDHandler(db *database.Queries, moderator database.Moderator) ht
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(appeal)
+	})
+}
+
+func GetContributorsAppeals(db *database.Queries) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		appeals, err := db.ListAppealsByContributors(r.Context())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(appeals)
+	})
+}
+
+func GetUsersAppeals(db *database.Queries) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		appeals, err := db.ListAppealsByUsers(r.Context())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(appeals)
 	})
 }
