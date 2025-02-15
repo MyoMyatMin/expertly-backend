@@ -126,6 +126,7 @@ func GetAllCommentsByPostHandler(db *database.Queries) http.Handler {
 		postSlug := chi.URLParam(r, "postSlug")
 		PostID, err := db.GetPostBySlug(r.Context(), postSlug)
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Failed to get post ID: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -134,6 +135,7 @@ func GetAllCommentsByPostHandler(db *database.Queries) http.Handler {
 
 		dbcomments, err := db.GetCommentsByPost(r.Context(), postID)
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Failed to get comments: "+err.Error(), http.StatusInternalServerError)
 			return
 		}

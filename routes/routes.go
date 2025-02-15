@@ -56,9 +56,9 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 
 	r.Get("/posts/{slug}",
 		middlewares.MiddlewareModeratorOrUser(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
-			handlers.GetPostBySlugHandler(queries).ServeHTTP(w, r)
+			handlers.GetPostBySlugHandler(queries, u, database.Moderator{}).ServeHTTP(w, r)
 		}, func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
-			handlers.GetPostBySlugHandler(queries).ServeHTTP(w, r)
+			handlers.GetPostBySlugHandler(queries, database.User{}, m).ServeHTTP(w, r)
 		}))
 
 	r.Post("/posts/{postID}/upvotes", middlewares.MiddlewareAuth(queries,
@@ -142,6 +142,11 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		nil,
 		func(w http.ResponseWriter, r *http.Request, contributor database.Contributor) {
 			handlers.CreatePostHandler(queries, contributor).ServeHTTP(w, r)
+		}, nil, "contributor"))
+
+	r.Delete("/posts/{id}", middlewares.MiddlewareAuth(queries, nil,
+		func(w http.ResponseWriter, r *http.Request, contributor database.Contributor) {
+			handlers.DeletePostHandler(queries, contributor).ServeHTTP(w, r)
 		}, nil, "contributor"))
 
 	// Moderator Routes

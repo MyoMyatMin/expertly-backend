@@ -90,8 +90,7 @@ func GetPostByIDHandler(db *database.Queries, user database.User) http.Handler {
 		json.NewEncoder(w).Encode(post)
 	})
 }
-
-func GetPostBySlugHandler(db *database.Queries) http.Handler {
+func GetPostBySlugHandler(db *database.Queries, user database.User, moderator database.Moderator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
 		post, err := db.GetPostBySlug(r.Context(), slug)
@@ -105,15 +104,24 @@ func GetPostBySlugHandler(db *database.Queries) http.Handler {
 			http.Error(w, "Invalid post ID", http.StatusBadRequest) // 400
 			return
 		}
-		postDetails, err := db.GetPostDetailsByID(r.Context(), postUUID)
-		if err != nil {
-			http.Error(w, "Couldn't get post", http.StatusNotFound) // 404
-			return
+
+		var postDetails interface{}
+		if user != (database.User{}) {
+			postDetails, err = db.GetPostDetailsForUsersByID(r.Context(), database.GetPostDetailsForUsersByIDParams{
+				PostID: postUUID,
+				UserID: user.UserID,
+			})
+		} else {
+			postDetails, err = db.GetPostDetailsByID(r.Context(), postUUID)
 		}
 
+		if err != nil {
+			http.Error(w, "Couldn't get post details", http.StatusNotFound) // 404
+			return
+		}
+		fmt.Println(postDetails)
 		w.WriteHeader(http.StatusOK) // 200
 		json.NewEncoder(w).Encode(postDetails)
-
 	})
 }
 
@@ -161,6 +169,28 @@ func UpdatePostHandler(db *database.Queries, contributor database.Contributor) h
 
 		w.WriteHeader(http.StatusOK) // 200
 		json.NewEncoder(w).Encode(post)
+	})
+}
+
+func DeletePostHandler(db *database.Queries, contributor database.Contributor) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		postID := chi.URLParam(r, "id")
+		fmt.Println(postID)
+		postUUID, err := uuid.Parse(postID)
+		if err != nil {
+			fmt.Println(err)
+			http.Error(w, "Invalid post ID", http.StatusBadRequest) // 400
+			return
+		}
+
+		err = db.DeletePost(r.Context(), postUUID)
+		if err != nil {
+			fmt.Println(err)
+			http.Error(w, "Couldn't delete post", http.StatusInternalServerError) // 500
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent) // 204
 	})
 }
 

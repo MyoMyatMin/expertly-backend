@@ -78,6 +78,16 @@ func (q *Queries) DeletePost(ctx context.Context, postID uuid.UUID) error {
 	return err
 }
 
+const deletePostBySlug = `-- name: DeletePostBySlug :exec
+DELETE FROM posts
+WHERE slug = $1
+`
+
+func (q *Queries) DeletePostBySlug(ctx context.Context, slug string) error {
+	_, err := q.db.ExecContext(ctx, deletePostBySlug, slug)
+	return err
+}
+
 const getPost = `-- name: GetPost :one
 SELECT 
     post_id, 
@@ -215,6 +225,92 @@ func (q *Queries) GetPostDetailsByID(ctx context.Context, postID uuid.UUID) (Get
 		&i.AuthorUsername,
 		&i.UpvoteCount,
 		&i.CommentCount,
+	)
+	return i, err
+}
+
+const getPostDetailsForUsersByID = `-- name: GetPostDetailsForUsersByID :one
+SELECT 
+    p.post_id, 
+    p.user_id, 
+    p.slug, 
+    p.title, 
+    p.content, 
+    p.created_at, 
+    p.updated_at,
+    u.name AS author_name,
+    u.username AS author_username,
+    COALESCE(upvote_counts.count, 0) AS upvote_count,
+    COALESCE(comment_counts.count, 0) AS comment_count,
+    EXISTS (
+        SELECT 1 
+        FROM upvotes 
+        WHERE upvotes.post_id = p.post_id  -- Prefix ` + "`" + `post_id` + "`" + ` with table alias
+        AND upvotes.user_id = $2          -- Prefix ` + "`" + `user_id` + "`" + ` with table alias
+    ) AS has_upvoted,
+    EXISTS (
+        SELECT 1 
+        FROM saved_posts 
+        WHERE saved_posts.post_id = p.post_id  -- Prefix ` + "`" + `post_id` + "`" + ` with table alias
+        AND saved_posts.user_id = $2            -- Prefix ` + "`" + `user_id` + "`" + ` with table alias
+    ) AS has_saved
+FROM posts p
+JOIN users u ON p.user_id = u.user_id
+LEFT JOIN (
+    SELECT 
+        post_id, 
+        COUNT(*) AS count
+    FROM upvotes
+    GROUP BY post_id
+) upvote_counts ON p.post_id = upvote_counts.post_id
+LEFT JOIN (
+    SELECT 
+        post_id, 
+        COUNT(*) AS count
+    FROM comments
+    GROUP BY post_id
+) comment_counts ON p.post_id = comment_counts.post_id
+WHERE p.post_id = $1
+`
+
+type GetPostDetailsForUsersByIDParams struct {
+	PostID uuid.UUID
+	UserID uuid.UUID
+}
+
+type GetPostDetailsForUsersByIDRow struct {
+	PostID         uuid.UUID
+	UserID         uuid.UUID
+	Slug           string
+	Title          string
+	Content        string
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+	AuthorName     string
+	AuthorUsername string
+	UpvoteCount    int64
+	CommentCount   int64
+	HasUpvoted     bool
+	HasSaved       bool
+}
+
+func (q *Queries) GetPostDetailsForUsersByID(ctx context.Context, arg GetPostDetailsForUsersByIDParams) (GetPostDetailsForUsersByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getPostDetailsForUsersByID, arg.PostID, arg.UserID)
+	var i GetPostDetailsForUsersByIDRow
+	err := row.Scan(
+		&i.PostID,
+		&i.UserID,
+		&i.Slug,
+		&i.Title,
+		&i.Content,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AuthorName,
+		&i.AuthorUsername,
+		&i.UpvoteCount,
+		&i.CommentCount,
+		&i.HasUpvoted,
+		&i.HasSaved,
 	)
 	return i, err
 }
