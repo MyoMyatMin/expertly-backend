@@ -87,7 +87,7 @@ SELECT
     p.created_at, 
     p.updated_at,
     COUNT(DISTINCT u.user_id) AS upvote_count,
-    COUNT( c.comment_id) AS comment_count
+    COUNT(DISTINCT c.comment_id) AS comment_count
 FROM posts p
 LEFT JOIN upvotes u ON p.post_id = u.post_id
 LEFT JOIN comments c ON p.post_id = c.post_id

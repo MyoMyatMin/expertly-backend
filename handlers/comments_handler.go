@@ -16,9 +16,9 @@ type Comment struct {
 	ParentCommentID uuid.NullUUID `json:"parent_comment_id"`
 	PostID          uuid.UUID     `json:"post_id"`
 	UserID          uuid.UUID     `json:"user_id"`
-	Replies         []Comment     `json:"replies"`
 	Username        string        `json:"username"`
 	Name            string        `json:"name"`
+	Replies         []*Comment    `json:"replies"` // Change to slice of pointers
 }
 
 func CreateCommentHandler(db *database.Queries, user database.User) http.Handler {
@@ -27,19 +27,22 @@ func CreateCommentHandler(db *database.Queries, user database.User) http.Handler
 
 		type parameters struct {
 			Content         string        `json:"content"`
-			ParentCommentID uuid.NullUUID `json:"parent_comment_id"`
+			ParentCommentID uuid.NullUUID `json:"replyCommentId"`
 		}
 		PostID := chi.URLParam(r, "postID")
 
 		postID, err := uuid.Parse(PostID)
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
 		var params parameters
+		fmt.Println(r.Body, params)
 		err = json.NewDecoder(r.Body).Decode(&params)
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -70,7 +73,7 @@ func UpdateCommentHandler(db *database.Queries, user database.User) http.Handler
 		type parameters struct {
 			Content string `json:"content"`
 		}
-
+		fmt.Println("Here")
 		CommentID := chi.URLParam(r, "commentID")
 		commentID, err := uuid.Parse(CommentID)
 		if err != nil {
@@ -140,7 +143,7 @@ func GetAllCommentsByPostHandler(db *database.Queries) http.Handler {
 			return
 		}
 
-		fmt.Println(dbcomments)
+		fmt.Println(len(dbcomments))
 
 		var comments []Comment
 
@@ -159,8 +162,6 @@ func GetAllCommentsByPostHandler(db *database.Queries) http.Handler {
 
 		nestedComments := BuildNestedComments(comments)
 
-		fmt.Println(nestedComments)
-
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(nestedComments); err != nil {
 			http.Error(w, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
@@ -171,26 +172,25 @@ func GetAllCommentsByPostHandler(db *database.Queries) http.Handler {
 func BuildNestedComments(comments []Comment) []*Comment {
 	commentMap := make(map[uuid.UUID]*Comment)
 
+	// Initialize map with pointers to each comment in the original slice
 	for i := range comments {
-		commentMap[comments[i].ID] = &comments[i]
+		comment := &comments[i]        // Pointer to the original comment in the slice
+		comment.Replies = []*Comment{} // Initialize Replies as slice of pointers
+		commentMap[comment.ID] = comment
 	}
 
 	var nestedComments []*Comment
 
 	for i := range comments {
-		comment := &comments[i]
-
+		comment := commentMap[comments[i].ID]
 		if !comment.ParentCommentID.Valid {
+			// Add top-level comments to the result
 			nestedComments = append(nestedComments, comment)
 		} else {
+			// Append the comment as a reply to its parent
 			parentID := comment.ParentCommentID.UUID
-			parentComment, ok := commentMap[parentID]
-
-			if ok {
-				parentComment.Replies = append(parentComment.Replies, *comment)
-
-			} else {
-				fmt.Println("Parent comment not found")
+			if parentComment, ok := commentMap[parentID]; ok {
+				parentComment.Replies = append(parentComment.Replies, comment)
 			}
 		}
 	}
