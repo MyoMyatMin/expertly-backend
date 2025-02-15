@@ -109,6 +109,11 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			handlers.CreateFollowHandler(queries, user).ServeHTTP(w, r)
 		}, nil, nil, "user"))
 
+	r.Get("/upvotes", middlewares.MiddlewareAuth(queries,
+		func(w http.ResponseWriter, r *http.Request, user database.User) {
+			handlers.GetUpvotesHandlerByUser(queries, user).ServeHTTP(w, r)
+		}, nil, nil, "user"))
+
 	r.Delete("/follow/{id}", middlewares.MiddlewareAuth(queries,
 		func(w http.ResponseWriter, r *http.Request, user database.User) {
 			handlers.DeleteFollowHandler(queries, user).ServeHTTP(w, r)

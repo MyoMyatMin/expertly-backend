@@ -3,6 +3,8 @@ package handlers
 import (
 	"net/http"
 
+	"encoding/json"
+
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -63,4 +65,20 @@ func DeleteUpvoteHandler(db *database.Queries, user database.User) http.Handler 
 
 		w.WriteHeader(http.StatusNoContent)
 	})
+}
+
+func GetUpvotesHandlerByUser(db *database.Queries, user database.User) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		upvotes, err := db.ListUpvotesByUser(r.Context(), user.UserID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(upvotes)
+	})
+
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -73,19 +74,24 @@ func LoginModeratorController(db *database.Queries) http.Handler {
 			return
 		}
 
+		fmt.Println(params)
+
 		moderator, err := db.GetModeratorByEmail(r.Context(), params.Email)
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 			return
 		}
 
 		if err := bcrypt.CompareHashAndPassword([]byte(moderator.Password), []byte(params.Password)); err != nil {
+			fmt.Println(err)
 			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 			return
 		}
 
 		accessToken, err := generateAccessToken(moderator.ModeratorID)
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Couldn't generate access token", http.StatusInternalServerError)
 			return
 		}

@@ -83,3 +83,35 @@ func (q *Queries) ListUpvotesByPost(ctx context.Context, postID uuid.UUID) ([]Up
 	}
 	return items, nil
 }
+
+const listUpvotesByUser = `-- name: ListUpvotesByUser :many
+SELECT 
+    user_id, 
+    post_id, 
+    created_at
+FROM upvotes
+WHERE user_id = $1
+`
+
+func (q *Queries) ListUpvotesByUser(ctx context.Context, userID uuid.UUID) ([]Upvote, error) {
+	rows, err := q.db.QueryContext(ctx, listUpvotesByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Upvote
+	for rows.Next() {
+		var i Upvote
+		if err := rows.Scan(&i.UserID, &i.PostID, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

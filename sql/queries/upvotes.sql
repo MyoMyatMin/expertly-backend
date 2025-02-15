@@ -20,3 +20,12 @@ SELECT
     created_at
 FROM upvotes
 WHERE post_id = $1;
+
+-- name: ListUpvotesByUser :many
+SELECT 
+    user_id, 
+    post_id, 
+    created_at
+FROM upvotes
+WHERE user_id = $1;
+
