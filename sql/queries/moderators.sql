@@ -49,6 +49,16 @@ SET
 WHERE moderator_id = $1
 RETURNING moderator_id, name, email, role, created_at, updated_at;
 
+-- name: GetALLModerators :many
+SELECT 
+    moderator_id, 
+    name, 
+    email, 
+    role, 
+    created_at, 
+    updated_at
+FROM moderators
+ORDER BY created_at DESC;
 
 
 

@@ -70,6 +70,57 @@ func (q *Queries) CreateModerator(ctx context.Context, arg CreateModeratorParams
 	return i, err
 }
 
+const getALLModerators = `-- name: GetALLModerators :many
+SELECT 
+    moderator_id, 
+    name, 
+    email, 
+    role, 
+    created_at, 
+    updated_at
+FROM moderators
+ORDER BY created_at DESC
+`
+
+type GetALLModeratorsRow struct {
+	ModeratorID uuid.UUID
+	Name        string
+	Email       string
+	Role        string
+	CreatedAt   sql.NullTime
+	UpdatedAt   sql.NullTime
+}
+
+func (q *Queries) GetALLModerators(ctx context.Context) ([]GetALLModeratorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getALLModerators)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetALLModeratorsRow
+	for rows.Next() {
+		var i GetALLModeratorsRow
+		if err := rows.Scan(
+			&i.ModeratorID,
+			&i.Name,
+			&i.Email,
+			&i.Role,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getModeratorByEmail = `-- name: GetModeratorByEmail :one
 SELECT 
     moderator_id, 

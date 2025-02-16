@@ -37,6 +37,7 @@ func CreateModeratorHandler(db *database.Queries, moderator database.Moderator) 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
 
 		if err != nil {
+
 			http.Error(w, "Counldn't hash password", http.StatusInternalServerError)
 		}
 
@@ -50,6 +51,7 @@ func CreateModeratorHandler(db *database.Queries, moderator database.Moderator) 
 		})
 
 		if err != nil {
+			fmt.Println(err)
 			http.Error(w, "Couldn't create user", http.StatusInternalServerError)
 			return
 		}
@@ -136,5 +138,18 @@ func LoginModeratorController(db *database.Queries) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 
+	})
+}
+
+func GetAllModerators(db *database.Queries) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		moderators, err := db.GetALLModerators(r.Context())
+		if err != nil {
+			http.Error(w, "Couldn't get moderators", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(moderators)
 	})
 }
