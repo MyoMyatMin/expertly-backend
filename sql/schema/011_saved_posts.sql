@@ -8,3 +8,4 @@ CREATE TABLE saved_posts(
 
 -- +goose Down
 DROP TABLE saved_posts;
+

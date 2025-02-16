@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/go-chi/chi/v5"
@@ -25,6 +26,8 @@ func CreateAppealHandler(db *database.Queries, user database.User) http.Handler 
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
+
+		fmt.Println(params)
 
 		_, err = db.CreateAppeal(r.Context(), database.CreateAppealParams{
 			AppealID:       uuid.New(),
@@ -78,6 +81,44 @@ func UpdateAppealStatus(db *database.Queries, moderator database.Moderator) http
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if params.Status == "resolved" {
+			appeal, err := db.GetAppealById(r.Context(), appealID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			report, err := db.GetReportById(r.Context(), appeal.TargetReportID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			user, err := db.GetUserById(r.Context(), appeal.AppealedBy)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			var newSuspendedUntil sql.NullTime
+			if report.SuspendDays.Int32 == 0 {
+				newSuspendedUntil = sql.NullTime{Valid: false}
+			} else {
+				newSuspendedUntil = sql.NullTime{Time: user.SuspendedUntil.Time.AddDate(0, 0, -int(report.SuspendDays.Int32)), Valid: true}
+				if newSuspendedUntil.Time.Before(time.Now()) {
+					newSuspendedUntil = sql.NullTime{Valid: false}
+				}
+			}
+			err = db.UpdateUserSuspension(r.Context(), database.UpdateUserSuspensionParams{
+				UserID:         user.UserID,
+				SuspendedUntil: newSuspendedUntil,
+			})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)

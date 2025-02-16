@@ -87,6 +87,7 @@ type Report struct {
 	ReviewedAt      sql.NullTime
 	Reviewedby      uuid.NullUUID
 	CreatedAt       sql.NullTime
+	SuspendDays     sql.NullInt32
 }
 
 type SavedPost struct {

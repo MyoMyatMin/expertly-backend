@@ -112,9 +112,10 @@ func UpdateReportStatusHandler(db *database.Queries, moderator database.Moderato
 
 		status := sql.NullString{String: params.Status, Valid: params.Status != ""}
 		_, err = db.UpdateReportStatus(r.Context(), database.UpdateReportStatusParams{
-			ReportID:   reportID,
-			Status:     status,
-			Reviewedby: uuid.NullUUID{UUID: moderator.ModeratorID, Valid: true},
+			ReportID:    reportID,
+			Status:      status,
+			SuspendDays: sql.NullInt32{Int32: int32(params.SuspendedDays), Valid: params.SuspendedDays != 0},
+			Reviewedby:  uuid.NullUUID{UUID: moderator.ModeratorID, Valid: true},
 		})
 		if err != nil {
 			fmt.Println("Hi", err)
@@ -171,6 +172,20 @@ func GetReportedContributorsHandler(db *database.Queries, moderator database.Mod
 func GetReportedUserHandler(db *database.Queries, moderator database.Moderator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reports, err := db.ListReportedUsers(r.Context())
+		if err != nil {
+			fmt.Print(err)
+			http.Error(w, "Couldn't get reports", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(reports)
+	})
+}
+
+func GetResolvedReportsWithSuspensionHandler(db *database.Queries, user database.User) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reports, err := db.GetResolvedReportsWithSuspensionByUserId(r.Context(), user.UserID)
 		if err != nil {
 			fmt.Print(err)
 			http.Error(w, "Couldn't get reports", http.StatusInternalServerError)
