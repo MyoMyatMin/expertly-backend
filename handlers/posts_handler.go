@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -240,4 +241,18 @@ func deleteImagesFromCloudinary(publicID string) error {
 	_, err = cld.Upload.Destroy(context.Background(), uploader.DestroyParams{PublicID: publicID})
 
 	return err
+}
+
+func SearchPostsHandler(db *database.Queries) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("q")
+		posts, err := db.PostSearchByKeyword(r.Context(), sql.NullString{String: query, Valid: query != ""})
+		if err != nil {
+			http.Error(w, "Couldn't search posts", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK) // 200
+		json.NewEncoder(w).Encode(posts)
+	})
 }

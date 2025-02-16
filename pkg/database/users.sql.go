@@ -206,6 +206,63 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 	return i, err
 }
 
+const searchUsersByKeyword = `-- name: SearchUsersByKeyword :many
+SELECT 
+    user_id, 
+    name, 
+    username,
+    email, 
+    password, 
+    suspended_until, 
+    created_at, 
+    updated_at
+FROM users
+WHERE name ILIKE '%' || $1 || '%' OR username ILIKE '%' || $1 || '%'
+`
+
+type SearchUsersByKeywordRow struct {
+	UserID         uuid.UUID
+	Name           string
+	Username       string
+	Email          string
+	Password       string
+	SuspendedUntil sql.NullTime
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+func (q *Queries) SearchUsersByKeyword(ctx context.Context, dollar_1 sql.NullString) ([]SearchUsersByKeywordRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsersByKeyword, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchUsersByKeywordRow
+	for rows.Next() {
+		var i SearchUsersByKeywordRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Name,
+			&i.Username,
+			&i.Email,
+			&i.Password,
+			&i.SuspendedUntil,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users
 SET 

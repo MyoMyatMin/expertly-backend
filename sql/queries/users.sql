@@ -74,3 +74,16 @@ UPDATE users
 SET 
     suspended_until = $2
 WHERE user_id = $1;
+
+-- name: SearchUsersByKeyword :many
+SELECT 
+    user_id, 
+    name, 
+    username,
+    email, 
+    password, 
+    suspended_until, 
+    created_at, 
+    updated_at
+FROM users
+WHERE name ILIKE '%' || $1 || '%' OR username ILIKE '%' || $1 || '%';

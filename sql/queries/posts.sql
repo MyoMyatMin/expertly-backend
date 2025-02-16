@@ -162,3 +162,21 @@ WHERE p.post_id = $1;
 -- name: DeletePostBySlug :exec
 DELETE FROM posts
 WHERE slug = $1;
+
+-- name: PostSearchByKeyword :many
+SELECT 
+    p.post_id, 
+    p.slug, 
+    p.title, 
+    p.user_id, 
+    p.content, 
+    p.created_at, 
+    p.updated_at, 
+    u.name AS author_name,
+    u.username AS author_username
+FROM posts p
+JOIN users u ON p.user_id = u.user_id
+WHERE p.title ILIKE '%' || $1 || '%'
+ORDER BY 
+    p.created_at DESC -- Prioritize newer posts
+LIMIT 20;

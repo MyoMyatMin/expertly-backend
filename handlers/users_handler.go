@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -462,5 +463,31 @@ func TestMiddlewaresHandler(db *database.Queries, user database.User) http.Handl
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func SearchUsersHandler(db *database.Queries) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("q")
+
+		users, err := db.SearchUsersByKeyword(r.Context(), sql.NullString{String: query, Valid: query != ""})
+		if err != nil {
+			http.Error(w, "Couldn't search users", http.StatusInternalServerError)
+			return
+		}
+
+		returnUsers := make([]ReturnedUser, len(users))
+		for i, user := range users {
+			returnUsers[i] = ReturnedUser{
+				UserID:         user.UserID,
+				Name:           user.Name,
+				Email:          user.Email,
+				Username:       user.Username,
+				SuspendedUntil: user.SuspendedUntil.Time,
+				Role:           "user",
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(returnUsers)
 	}
 }

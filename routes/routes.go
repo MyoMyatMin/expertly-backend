@@ -264,5 +264,13 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		handlers.UpdateUserHandler(queries, u).ServeHTTP(w, r)
 	}, nil, nil, "user"))
 
+	r.Get("/search/posts", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.SearchPostsHandler(queries).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
+	r.Get("/search/users", middlewares.MiddlewareAuth(queries, func(w http.ResponseWriter, r *http.Request, u database.User) {
+		handlers.SearchUsersHandler(queries).ServeHTTP(w, r)
+	}, nil, nil, "user"))
+
 	return r
 }

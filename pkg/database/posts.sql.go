@@ -393,6 +393,70 @@ func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
 	return items, nil
 }
 
+const postSearchByKeyword = `-- name: PostSearchByKeyword :many
+SELECT 
+    p.post_id, 
+    p.slug, 
+    p.title, 
+    p.user_id, 
+    p.content, 
+    p.created_at, 
+    p.updated_at, 
+    u.name AS author_name,
+    u.username AS author_username
+FROM posts p
+JOIN users u ON p.user_id = u.user_id
+WHERE p.title ILIKE '%' || $1 || '%'
+ORDER BY 
+    p.created_at DESC -- Prioritize newer posts
+LIMIT 20
+`
+
+type PostSearchByKeywordRow struct {
+	PostID         uuid.UUID
+	Slug           string
+	Title          string
+	UserID         uuid.UUID
+	Content        string
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+	AuthorName     string
+	AuthorUsername string
+}
+
+func (q *Queries) PostSearchByKeyword(ctx context.Context, dollar_1 sql.NullString) ([]PostSearchByKeywordRow, error) {
+	rows, err := q.db.QueryContext(ctx, postSearchByKeyword, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PostSearchByKeywordRow
+	for rows.Next() {
+		var i PostSearchByKeywordRow
+		if err := rows.Scan(
+			&i.PostID,
+			&i.Slug,
+			&i.Title,
+			&i.UserID,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AuthorName,
+			&i.AuthorUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updatePost = `-- name: UpdatePost :one
 UPDATE posts
 SET
