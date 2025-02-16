@@ -288,11 +288,12 @@ func CheckAuthStatsHandler(db *database.Queries, user database.User, moderator d
 			}
 
 			returnedUser = ReturnedUser{
-				UserID:   user.UserID,
-				Name:     user.Name,
-				Email:    user.Email,
-				Username: user.Username,
-				Role:     "user",
+				UserID:         user.UserID,
+				Name:           user.Name,
+				Email:          user.Email,
+				Username:       user.Username,
+				SuspendedUntil: user.SuspendedUntil.Time,
+				Role:           "user",
 			}
 
 			if isContributor {

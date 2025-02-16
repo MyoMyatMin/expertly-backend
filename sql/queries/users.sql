@@ -68,3 +68,9 @@ SET
 WHERE user_id = $1
 RETURNING user_id, name, email, username, suspended_until, created_at, updated_at;
 
+
+-- name: UpdateUserSuspension :exec
+UPDATE users
+SET 
+    suspended_until = $2
+WHERE user_id = $1;

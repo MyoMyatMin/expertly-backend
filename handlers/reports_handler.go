@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/MyoMyatMin/expertly-backend/pkg/database"
 	"github.com/go-chi/chi/v5"
@@ -29,15 +30,7 @@ func CreateReportHandler(db *database.Queries, user database.User) http.Handler 
 
 		var targetUserID uuid.UUID
 		var targetPostID uuid.NullUUID
-		if params.TargetPostID.Valid {
-			post, err := db.GetPost(r.Context(), params.TargetPostID.UUID)
-			if err != nil {
-				http.Error(w, "Post not found", http.StatusNotFound)
-				return
-			}
-			targetUserID = post.UserID // Author of the post
-			targetPostID = params.TargetPostID
-		} else if params.TargetCommentID.Valid {
+		if params.TargetCommentID.Valid {
 			comment, err := db.GetCommentByID(r.Context(), params.TargetCommentID.UUID)
 			if err != nil {
 				http.Error(w, "Comment not found", http.StatusNotFound)
@@ -46,7 +39,14 @@ func CreateReportHandler(db *database.Queries, user database.User) http.Handler 
 
 			targetUserID = comment.UserID
 			targetPostID = uuid.NullUUID{UUID: comment.PostID, Valid: true}
-
+		} else if params.TargetPostID.Valid {
+			post, err := db.GetPost(r.Context(), params.TargetPostID.UUID)
+			if err != nil {
+				http.Error(w, "Post not found", http.StatusNotFound)
+				return
+			}
+			targetUserID = post.UserID
+			targetPostID = params.TargetPostID
 		} else {
 			http.Error(w, "Invalid report target", http.StatusBadRequest)
 			return
@@ -84,11 +84,12 @@ func GetReportsHandler(db *database.Queries, moderator database.Moderator) http.
 		json.NewEncoder(w).Encode(reports)
 	})
 }
-
 func UpdateReportStatusHandler(db *database.Queries, moderator database.Moderator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
-			Status string `json:"status"`
+			Status        string    `json:"status"`
+			SuspendedDays int       `json:"suspendedDays"`
+			TargetUserID  uuid.UUID `json:"targetUserID"`
 		}
 
 		reportIDStr := chi.URLParam(r, "reportID")
@@ -116,9 +117,34 @@ func UpdateReportStatusHandler(db *database.Queries, moderator database.Moderato
 			Reviewedby: uuid.NullUUID{UUID: moderator.ModeratorID, Valid: true},
 		})
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Hi", err)
 			http.Error(w, "Couldn't update report status", http.StatusInternalServerError)
 			return
+		}
+
+		if params.Status == "resolved" {
+			targetUser, err := db.GetUserById(r.Context(), params.TargetUserID)
+			if err != nil {
+				fmt.Println("hello", err)
+				http.Error(w, "Couldn't get user", http.StatusInternalServerError)
+				return
+			}
+
+			suspendedUntil := time.Now().Truncate(24*time.Hour).Add(-7*time.Hour).AddDate(0, 0, params.SuspendedDays)
+			if targetUser.SuspendedUntil.Valid {
+				suspendedUntil = targetUser.SuspendedUntil.Time.Truncate(24*time.Hour).AddDate(0, 0, params.SuspendedDays)
+			}
+
+			err = db.UpdateUserSuspension(r.Context(), database.UpdateUserSuspensionParams{
+				UserID:         params.TargetUserID,
+				SuspendedUntil: sql.NullTime{Time: suspendedUntil, Valid: true},
+			})
+
+			if err != nil {
+				fmt.Println("Hi there", err)
+				http.Error(w, "Couldn't update user suspension", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")

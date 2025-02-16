@@ -225,3 +225,20 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 	_, err := q.db.ExecContext(ctx, updateUser, arg.UserID, arg.Name, arg.Username)
 	return err
 }
+
+const updateUserSuspension = `-- name: UpdateUserSuspension :exec
+UPDATE users
+SET 
+    suspended_until = $2
+WHERE user_id = $1
+`
+
+type UpdateUserSuspensionParams struct {
+	UserID         uuid.UUID
+	SuspendedUntil sql.NullTime
+}
+
+func (q *Queries) UpdateUserSuspension(ctx context.Context, arg UpdateUserSuspensionParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserSuspension, arg.UserID, arg.SuspendedUntil)
+	return err
+}
