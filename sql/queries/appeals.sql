@@ -28,6 +28,7 @@ FROM appeals a
 LEFT JOIN users u ON a.appealed_by = u.user_id
 LEFT JOIN reports r ON a.target_report_id = r.report_id
 ORDER BY a.created_at DESC;
+
 -- name: ListAppealsByContributors :many
 SELECT 
     a.appeal_id as appeal_id,

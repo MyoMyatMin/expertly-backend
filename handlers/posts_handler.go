@@ -93,6 +93,7 @@ func GetPostByIDHandler(db *database.Queries, user database.User) http.Handler {
 }
 func GetPostBySlugHandler(db *database.Queries, user database.User, moderator database.Moderator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("GetPostBySlugHandler")
 		slug := chi.URLParam(r, "slug")
 		post, err := db.GetPostBySlug(r.Context(), slug)
 		if err != nil {
@@ -113,6 +114,7 @@ func GetPostBySlugHandler(db *database.Queries, user database.User, moderator da
 				UserID: user.UserID,
 			})
 		} else {
+			fmt.Println("moderator")
 			postDetails, err = db.GetPostDetailsByID(r.Context(), postUUID)
 		}
 
@@ -120,7 +122,6 @@ func GetPostBySlugHandler(db *database.Queries, user database.User, moderator da
 			http.Error(w, "Couldn't get post details", http.StatusNotFound) // 404
 			return
 		}
-		fmt.Println(postDetails)
 		w.WriteHeader(http.StatusOK) // 200
 		json.NewEncoder(w).Encode(postDetails)
 	})

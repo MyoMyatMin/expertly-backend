@@ -123,45 +123,6 @@ func (q *Queries) GetFollowStatus(ctx context.Context, arg GetFollowStatusParams
 	return exists, err
 }
 
-const getFollowerList = `-- name: GetFollowerList :many
-SELECT 
-    following.follower_id,
-    users.name,
-    users.username
-FROM following
-JOIN users ON following.follower_id = users.user_id
-WHERE following.following_id = $1
-`
-
-type GetFollowerListRow struct {
-	FollowerID uuid.UUID
-	Name       string
-	Username   string
-}
-
-func (q *Queries) GetFollowerList(ctx context.Context, followingID uuid.UUID) ([]GetFollowerListRow, error) {
-	rows, err := q.db.QueryContext(ctx, getFollowerList, followingID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetFollowerListRow
-	for rows.Next() {
-		var i GetFollowerListRow
-		if err := rows.Scan(&i.FollowerID, &i.Name, &i.Username); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getFollowingCount = `-- name: GetFollowingCount :one
 SELECT COUNT(following_id)
 FROM following

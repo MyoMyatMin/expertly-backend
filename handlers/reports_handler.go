@@ -70,20 +70,6 @@ func CreateReportHandler(db *database.Queries, user database.User) http.Handler 
 	})
 }
 
-func GetReportsHandler(db *database.Queries, moderator database.Moderator) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("GetReportsHandler")
-		reports, err := db.ListAllReportDetails(r.Context())
-		if err != nil {
-			fmt.Print(err)
-			http.Error(w, "Couldn't get reports", http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(reports)
-	})
-}
 func UpdateReportStatusHandler(db *database.Queries, moderator database.Moderator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {

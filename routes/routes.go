@@ -120,10 +120,6 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 		func(w http.ResponseWriter, r *http.Request, m database.Moderator) {
 			handlers.GetFollowingListByIDHandler(queries).ServeHTTP(w, r)
 		}))
-	apiRouter.Get("/users/{username}/followers", middlewares.MiddlewareAuth(queries,
-		func(w http.ResponseWriter, r *http.Request, user database.User) {
-			handlers.GetFollowerListByIDHandler(queries).ServeHTTP(w, r)
-		}, nil, nil, "user"))
 
 	// Feed Route
 	apiRouter.Get("/feed", middlewares.MiddlewareAuth(queries,

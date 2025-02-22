@@ -39,16 +39,6 @@ SELECT
 FROM moderators
 WHERE moderator_id = $1;
 
--- name: UpdateModerator :one
-UPDATE moderators
-SET
-    name = $2,
-    email = $3,
-    role = $4,
-    updated_at = CURRENT_TIMESTAMP
-WHERE moderator_id = $1
-RETURNING moderator_id, name, email, role, created_at, updated_at;
-
 -- name: GetALLModerators :many
 SELECT 
     moderator_id, 

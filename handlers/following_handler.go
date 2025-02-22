@@ -9,32 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// func GetFollowingListHandler(db *database.Queries, user database.User) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		following, err := db.GetFollowingList(r.Context(), user.UserID)
-// 		if err != nil {
-// 			http.Error(w, "Couldn't get following list", http.StatusInternalServerError)
-// 			return
-// 		}
-
-// 		w.WriteHeader(http.StatusOK) // 200
-// 		json.NewEncoder(w).Encode(following)
-// 	})
-// }
-
-// func GetFollowerListHandler(db *database.Queries, user database.User) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		followers, err := db.GetFollowerList(r.Context(), user.UserID)
-// 		if err != nil {
-// 			http.Error(w, "Couldn't get follower list", http.StatusInternalServerError)
-// 			return
-// 		}
-
-// 		w.WriteHeader(http.StatusOK) // 200
-// 		json.NewEncoder(w).Encode(followers)
-// 	})
-// }
-
 func GetFollowingListByIDHandler(db *database.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -55,28 +29,6 @@ func GetFollowingListByIDHandler(db *database.Queries) http.Handler {
 
 		w.WriteHeader(http.StatusOK) // 200
 		json.NewEncoder(w).Encode(following)
-	})
-}
-
-func GetFollowerListByIDHandler(db *database.Queries) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract userID from URL
-		userIDParam := chi.URLParam(r, "userID")
-		userID, err := uuid.Parse(userIDParam)
-		if err != nil {
-			http.Error(w, "Invalid user ID", http.StatusBadRequest)
-			return
-		}
-
-		// Get follower list for the user
-		followers, err := db.GetFollowerList(r.Context(), userID)
-		if err != nil {
-			http.Error(w, "Couldn't get follower list", http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK) // 200
-		json.NewEncoder(w).Encode(followers)
 	})
 }
 

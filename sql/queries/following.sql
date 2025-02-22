@@ -7,14 +7,6 @@ FROM following
 JOIN users ON following.following_id = users.user_id
 WHERE following.follower_id = $1;
 
--- name: GetFollowerList :many
-SELECT 
-    following.follower_id,
-    users.name,
-    users.username
-FROM following
-JOIN users ON following.follower_id = users.user_id
-WHERE following.following_id = $1;
 
 -- name: CreateFollow :exec
 INSERT INTO following (follower_id, following_id)
