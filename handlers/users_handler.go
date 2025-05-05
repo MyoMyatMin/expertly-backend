@@ -131,6 +131,7 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			Expires:  time.Now().Add(1 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
 			Path:     "/",
 		})
 
@@ -140,6 +141,7 @@ func SignUpHandler(db *database.Queries) http.Handler {
 			Expires:  time.Now().Add(24 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
 			Path:     "/",
 		})
 
@@ -229,6 +231,7 @@ func LoginHandler(db *database.Queries) http.Handler {
 			Expires:  time.Now().Add(2 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
 			Path:     "/",
 		})
 
@@ -238,6 +241,7 @@ func LoginHandler(db *database.Queries) http.Handler {
 			Expires:  time.Now().Add(24 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
 			Path:     "/",
 		})
 
@@ -259,6 +263,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(-1 * time.Hour),
 		HttpOnly: true,
 		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
@@ -266,6 +271,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(-1 * time.Hour),
 		HttpOnly: true,
 		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 	})
 
 	response := map[string]interface{}{

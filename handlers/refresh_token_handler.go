@@ -60,6 +60,7 @@ func RefreshTokenHandler(db *database.Queries) http.Handler {
 			Expires:  time.Now().Add(2 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
 			Path:     "/",
 		})
 
@@ -69,6 +70,7 @@ func RefreshTokenHandler(db *database.Queries) http.Handler {
 			Expires:  time.Now().Add(24 * time.Hour),
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
 			Path:     "/",
 		})
 
