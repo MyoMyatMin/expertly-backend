@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -14,12 +15,19 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Function type definitions for different authentication handlers
 type HandlerWithUser func(http.ResponseWriter, *http.Request, database.User)
 type HandlerWithContributor func(http.ResponseWriter, *http.Request, database.Contributor)
 type HandlerWithModerator func(http.ResponseWriter, *http.Request, database.Moderator)
 
-// MiddlewareAuth handles authentication for different user types
+func loadEnvIfLocal() {
+	if os.Getenv("Local") == "local" {
+		if err := godotenv.Load(".env"); err != nil {
+			log.Println("Warning: failed to load .env (this is okay in production)")
+		}
+	}
+}
+
+// MiddlewareAuth handles role-based auth
 func MiddlewareAuth(
 	db *database.Queries,
 	handlerWithUser HandlerWithUser,
@@ -28,6 +36,8 @@ func MiddlewareAuth(
 	authType string, // "user", "contributor", or "moderator"
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		loadEnvIfLocal()
+
 		tokenString, err := extractTokenCookie(r)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
@@ -40,7 +50,6 @@ func MiddlewareAuth(
 			return
 		}
 
-		// Extract user ID from claims
 		userID, err := getUserIDFromClaims(claims)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
@@ -49,18 +58,18 @@ func MiddlewareAuth(
 
 		switch authType {
 		case "moderator":
-			// Fetch moderator
 			moderatorRow, err := db.GetModeratorById(r.Context(), userID)
 			if err != nil {
 				respondWithError(w, http.StatusUnauthorized, "Moderator not found")
 				return
 			}
-
 			moderator := database.Moderator{
 				ModeratorID: moderatorRow.ModeratorID,
 				CreatedAt:   moderatorRow.CreatedAt,
+				Role:        moderatorRow.Role,
+				Email:       moderatorRow.Email,
+				Name:        moderatorRow.Name,
 			}
-
 			handlerWithModerator(w, r, moderator)
 
 		case "contributor":
@@ -69,13 +78,11 @@ func MiddlewareAuth(
 				respondWithError(w, http.StatusUnauthorized, "Contributor not found")
 				return
 			}
-
 			contributor := database.Contributor{
 				UserID:          contributorRow.UserID,
 				ExpertiseFields: contributorRow.ExpertiseFields,
 				CreatedAt:       contributorRow.CreatedAt,
 			}
-
 			handlerWithContributor(w, r, contributor)
 
 		case "user":
@@ -84,7 +91,6 @@ func MiddlewareAuth(
 				respondWithError(w, http.StatusUnauthorized, "User not found")
 				return
 			}
-
 			user := database.User{
 				UserID:         userRow.UserID,
 				Name:           userRow.Name,
@@ -95,8 +101,6 @@ func MiddlewareAuth(
 				CreatedAt:      userRow.CreatedAt,
 				UpdatedAt:      userRow.UpdatedAt,
 			}
-
-			// Call the User-specific handler
 			handlerWithUser(w, r, user)
 
 		default:
@@ -105,12 +109,15 @@ func MiddlewareAuth(
 	}
 }
 
+// MiddlewareModeratorOrUser allows both roles
 func MiddlewareModeratorOrUser(
 	db *database.Queries,
 	handlerWithUser HandlerWithUser,
 	handlerWithModerator HandlerWithModerator,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		loadEnvIfLocal()
+
 		tokenString, err := extractTokenCookie(r)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, err.Error())
@@ -129,8 +136,8 @@ func MiddlewareModeratorOrUser(
 			return
 		}
 
-		moderatorRow, modErr := db.GetModeratorById(r.Context(), userID)
-		if modErr == nil {
+		// Try moderator first
+		if moderatorRow, err := db.GetModeratorById(r.Context(), userID); err == nil {
 			moderator := database.Moderator{
 				ModeratorID: moderatorRow.ModeratorID,
 				Role:        moderatorRow.Role,
@@ -142,12 +149,12 @@ func MiddlewareModeratorOrUser(
 			return
 		}
 
-		userRow, userErr := db.GetUserById(r.Context(), userID)
-		if userErr != nil {
+		// Fall back to user
+		userRow, err := db.GetUserById(r.Context(), userID)
+		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, "User not found")
 			return
 		}
-
 		user := database.User{
 			UserID:         userRow.UserID,
 			Name:           userRow.Name,
@@ -158,20 +165,18 @@ func MiddlewareModeratorOrUser(
 			CreatedAt:      userRow.CreatedAt,
 			UpdatedAt:      userRow.UpdatedAt,
 		}
-
 		handlerWithUser(w, r, user)
 	}
 }
 
-// respondWithError sends a JSON error response
+// --- Utility functions ---
+
 func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	response := map[string]string{"error": message}
-	_ = json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
-// extractTokenCookie retrieves the access token from the request cookie
 func extractTokenCookie(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("access_token")
 	if err != nil {
@@ -186,30 +191,25 @@ func extractTokenCookie(r *http.Request) (string, error) {
 	return cookie.Value, nil
 }
 
-// parseJWTToken validates and parses the JWT token
 func parseJWTToken(tokenString string) (jwt.MapClaims, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, errors.New("failed to load .env file")
-	}
 	jwtSecret := os.Getenv("SECRET_KEY")
 	if jwtSecret == "" {
 		return nil, errors.New("missing JWT secret key")
 	}
+
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(jwtSecret), nil
 	})
-	if isTokenExpired(claims) {
-		return nil, errors.New("token is expired")
-	}
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid token")
+	}
+	if isTokenExpired(claims) {
+		return nil, errors.New("token is expired")
 	}
 	return claims, nil
 }
 
-// getUserIDFromClaims extracts the user ID from JWT claims
 func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
@@ -222,13 +222,10 @@ func getUserIDFromClaims(claims jwt.MapClaims) (uuid.UUID, error) {
 	return userID, nil
 }
 
-// isTokenExpired checks if the JWT token has expired
 func isTokenExpired(claims jwt.MapClaims) bool {
-	expTime, ok := claims["exp"].(float64)
+	exp, ok := claims["exp"].(float64)
 	if !ok {
-		return true // If there's no "exp" claim, consider it invalid
+		return true
 	}
-	expTimeUnix := int64(expTime)
-	currentTime := time.Now().Unix()
-	return currentTime > expTimeUnix
+	return time.Now().Unix() > int64(exp)
 }
