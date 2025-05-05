@@ -19,14 +19,15 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 
 	r.Use(
 		cors.Handler(cors.Options{
-			AllowedOrigins:   []string{"https://*", "http://*"},
+			AllowedOrigins:   []string{"https://your-frontend.com", "http://localhost:3000"},
 			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-			AllowedHeaders:   []string{"*"},
+			AllowedHeaders:   []string{"Content-Type", "Authorization"},
 			ExposedHeaders:   []string{"Link"},
 			AllowCredentials: true,
 			MaxAge:           300,
 		}),
 	)
+
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`
