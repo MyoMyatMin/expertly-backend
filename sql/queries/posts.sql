@@ -66,7 +66,7 @@ LEFT JOIN (
     FROM upvotes 
     GROUP BY post_id
 ) upvote_counts ON p.post_id = upvote_counts.post_id
-WHERE p.created_at >= NOW() - INTERVAL '30 days'  -- Get posts from last 30 days
+WHERE p.created_at >= NOW() - INTERVAL '2 years'  -- Get posts from last 2 years
 ORDER BY 
     (COALESCE(upvote_counts.count, 0) * 2 + COALESCE(comment_counts.count, 0)) DESC, -- Weight upvotes & comments
     p.created_at DESC -- Prioritize newer posts if engagement is similar
