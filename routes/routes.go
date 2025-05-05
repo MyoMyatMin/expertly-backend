@@ -27,14 +27,29 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 			MaxAge:           300,
 		}),
 	)
-
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`
+			<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<title>Expertly Backend</title>
+			</head>
+			<body>
+				<h1>Welcome to Expertly Backend</h1>
+				<p>API documentation: <a href="https://github.com/MyoMyatMin/expertly-backend/blob/main/routes/routes.go" target="_blank">Routes Reference</a></p>
+			</body>
+			</html>
+		`))
+	})
 	// Create API router
 	apiRouter := chi.NewRouter()
 	r.Mount("/api", apiRouter)
 
 	queries := database.New(db)
 
-	// Auth Routes
 	apiRouter.Post("/auth/signup", handlers.SignUpHandler(queries).ServeHTTP)
 	apiRouter.Post("/auth/login", handlers.LoginHandler(queries).ServeHTTP)
 	apiRouter.Post("/auth/logout", handlers.LogoutHandler)
