@@ -178,6 +178,7 @@ func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 func extractTokenCookie(r *http.Request) (string, error) {
+	fmt.Println(r)
 	cookie, err := r.Cookie("access_token")
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
