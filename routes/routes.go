@@ -19,7 +19,7 @@ func SetUpRoutes(db *sql.DB) *chi.Mux {
 
 	r.Use(
 		cors.Handler(cors.Options{
-			AllowedOrigins:   []string{"https://your-frontend.com", "http://localhost:3000"},
+			AllowedOrigins:   []string{"https://expertly-psi.vercel.app", "http://localhost:3000"},
 			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 			AllowedHeaders:   []string{"Content-Type", "Authorization"},
 			ExposedHeaders:   []string{"Link"},
