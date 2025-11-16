@@ -1,6 +1,6 @@
 # Expertly Backend
 
-[Backend (Golang)](https://github.com/MyoMyatMin/expertly)
+[Frontend (Next.js)](https://github.com/MyoMyatMin/expertly)
 
 
 A robust backend API for a social platform with features for content sharing, user interactions, and moderation.
